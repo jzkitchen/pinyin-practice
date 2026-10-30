@@ -1,0 +1,869 @@
+{
+  "version": "1",
+  "date": "2026-10-30",
+  "shengmu": [
+    {
+      "id": "sm_b",
+      "label": "b",
+      "key": "b"
+    },
+    {
+      "id": "sm_p",
+      "label": "p",
+      "key": "p"
+    },
+    {
+      "id": "sm_m",
+      "label": "m",
+      "key": "m"
+    },
+    {
+      "id": "sm_f",
+      "label": "f",
+      "key": "f"
+    },
+    {
+      "id": "sm_d",
+      "label": "d",
+      "key": "d"
+    },
+    {
+      "id": "sm_t",
+      "label": "t",
+      "key": "t"
+    },
+    {
+      "id": "sm_n",
+      "label": "n",
+      "key": "n"
+    },
+    {
+      "id": "sm_l",
+      "label": "l",
+      "key": "l"
+    },
+    {
+      "id": "sm_g",
+      "label": "g",
+      "key": "g"
+    },
+    {
+      "id": "sm_k",
+      "label": "k",
+      "key": "k"
+    },
+    {
+      "id": "sm_h",
+      "label": "h",
+      "key": "h"
+    },
+    {
+      "id": "sm_j",
+      "label": "j",
+      "key": "j"
+    },
+    {
+      "id": "sm_q",
+      "label": "q",
+      "key": "q"
+    },
+    {
+      "id": "sm_x",
+      "label": "x",
+      "key": "x"
+    },
+    {
+      "id": "sm_zh",
+      "label": "zh",
+      "key": "zh"
+    },
+    {
+      "id": "sm_ch",
+      "label": "ch",
+      "key": "ch"
+    },
+    {
+      "id": "sm_sh",
+      "label": "sh",
+      "key": "sh"
+    },
+    {
+      "id": "sm_r",
+      "label": "r",
+      "key": "r"
+    },
+    {
+      "id": "sm_z",
+      "label": "z",
+      "key": "z"
+    },
+    {
+      "id": "sm_c",
+      "label": "c",
+      "key": "c"
+    },
+    {
+      "id": "sm_s",
+      "label": "s",
+      "key": "s"
+    },
+    {
+      "id": "sm_0",
+      "label": "零",
+      "key": ""
+    }
+  ],
+  "yunmu": [
+    {
+      "id": "ym_a",
+      "label": "a",
+      "key": "a",
+      "group": "單"
+    },
+    {
+      "id": "ym_o",
+      "label": "o",
+      "key": "o",
+      "group": "單"
+    },
+    {
+      "id": "ym_e",
+      "label": "e",
+      "key": "e",
+      "group": "單"
+    },
+    {
+      "id": "ym_i",
+      "label": "i",
+      "key": "i",
+      "group": "單"
+    },
+    {
+      "id": "ym_u",
+      "label": "u",
+      "key": "u",
+      "group": "單"
+    },
+    {
+      "id": "ym_v",
+      "label": "ü",
+      "key": "ü",
+      "group": "單"
+    },
+    {
+      "id": "ym_ai",
+      "label": "ai",
+      "key": "ai",
+      "group": "複"
+    },
+    {
+      "id": "ym_ei",
+      "label": "ei",
+      "key": "ei",
+      "group": "複"
+    },
+    {
+      "id": "ym_ui",
+      "label": "ui",
+      "key": "ui",
+      "group": "複"
+    },
+    {
+      "id": "ym_ao",
+      "label": "ao",
+      "key": "ao",
+      "group": "複"
+    },
+    {
+      "id": "ym_ou",
+      "label": "ou",
+      "key": "ou",
+      "group": "複"
+    },
+    {
+      "id": "ym_iu",
+      "label": "iu",
+      "key": "iu",
+      "group": "複"
+    },
+    {
+      "id": "ym_ie",
+      "label": "ie",
+      "key": "ie",
+      "group": "複"
+    },
+    {
+      "id": "ym_ve",
+      "label": "üe",
+      "key": "üe",
+      "group": "複"
+    },
+    {
+      "id": "ym_er",
+      "label": "er",
+      "key": "er",
+      "group": "特殊"
+    },
+    {
+      "id": "ym_an",
+      "label": "an",
+      "key": "an",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_en",
+      "label": "en",
+      "key": "en",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_in",
+      "label": "in",
+      "key": "in",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_un",
+      "label": "un",
+      "key": "un",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_vn",
+      "label": "ün",
+      "key": "ün",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_ang",
+      "label": "ang",
+      "key": "ang",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_eng",
+      "label": "eng",
+      "key": "eng",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_ing",
+      "label": "ing",
+      "key": "ing",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_ong",
+      "label": "ong",
+      "key": "ong",
+      "group": "鼻"
+    },
+    {
+      "id": "ym_ia",
+      "label": "ia",
+      "key": "ia",
+      "group": "齊齒"
+    },
+    {
+      "id": "ym_iao",
+      "label": "iao",
+      "key": "iao",
+      "group": "齊齒"
+    },
+    {
+      "id": "ym_ian",
+      "label": "ian",
+      "key": "ian",
+      "group": "齊齒"
+    },
+    {
+      "id": "ym_iang",
+      "label": "iang",
+      "key": "iang",
+      "group": "齊齒"
+    },
+    {
+      "id": "ym_iong",
+      "label": "iong",
+      "key": "iong",
+      "group": "齊齒"
+    },
+    {
+      "id": "ym_ua",
+      "label": "ua",
+      "key": "ua",
+      "group": "合口"
+    },
+    {
+      "id": "ym_uo",
+      "label": "uo",
+      "key": "uo",
+      "group": "合口"
+    },
+    {
+      "id": "ym_uai",
+      "label": "uai",
+      "key": "uai",
+      "group": "合口"
+    },
+    {
+      "id": "ym_uan",
+      "label": "uan",
+      "key": "uan",
+      "group": "合口"
+    },
+    {
+      "id": "ym_uang",
+      "label": "uang",
+      "key": "uang",
+      "group": "合口"
+    },
+    {
+      "id": "ym_van",
+      "label": "üan",
+      "key": "üan",
+      "group": "撮口"
+    }
+  ],
+  "shengdiao": [
+    {
+      "id": "sd_1",
+      "label": "第一聲",
+      "mark": "ˉ",
+      "tone": 1
+    },
+    {
+      "id": "sd_2",
+      "label": "第二聲",
+      "mark": "ˊ",
+      "tone": 2
+    },
+    {
+      "id": "sd_3",
+      "label": "第三聲",
+      "mark": "ˇ",
+      "tone": 3
+    },
+    {
+      "id": "sd_4",
+      "label": "第四聲",
+      "mark": "ˋ",
+      "tone": 4
+    },
+    {
+      "id": "sd_0",
+      "label": "輕聲",
+      "mark": "·",
+      "tone": 0
+    }
+  ],
+  "seed_words": [
+    {
+      "id": "s01",
+      "han": "媽媽",
+      "pinyin": "māma",
+      "tones": [
+        1,
+        0
+      ],
+      "accept": [
+        "māma",
+        "māmā"
+      ]
+    },
+    {
+      "id": "s02",
+      "han": "爸爸",
+      "pinyin": "bàba",
+      "tones": [
+        4,
+        0
+      ],
+      "accept": [
+        "bàba",
+        "bàbà"
+      ]
+    },
+    {
+      "id": "s03",
+      "han": "你好",
+      "pinyin": "nǐhǎo",
+      "tones": [
+        3,
+        3
+      ],
+      "accept": [
+        "nǐhǎo"
+      ]
+    },
+    {
+      "id": "s04",
+      "han": "謝謝",
+      "pinyin": "xièxie",
+      "tones": [
+        4,
+        0
+      ],
+      "accept": [
+        "xièxie",
+        "xièxiè"
+      ]
+    },
+    {
+      "id": "s05",
+      "han": "再見",
+      "pinyin": "zàijiàn",
+      "tones": [
+        4,
+        4
+      ],
+      "accept": [
+        "zàijiàn"
+      ]
+    },
+    {
+      "id": "s06",
+      "han": "老師",
+      "pinyin": "lǎoshī",
+      "tones": [
+        3,
+        1
+      ],
+      "accept": [
+        "lǎoshī"
+      ]
+    },
+    {
+      "id": "s07",
+      "han": "同學",
+      "pinyin": "tóngxué",
+      "tones": [
+        2,
+        2
+      ],
+      "accept": [
+        "tóngxué"
+      ]
+    },
+    {
+      "id": "s08",
+      "han": "朋友",
+      "pinyin": "péngyou",
+      "tones": [
+        2,
+        0
+      ],
+      "accept": [
+        "péngyou",
+        "péngyǒu"
+      ]
+    },
+    {
+      "id": "s09",
+      "han": "水",
+      "pinyin": "shuǐ",
+      "tones": [
+        3
+      ],
+      "accept": [
+        "shuǐ"
+      ]
+    },
+    {
+      "id": "s10",
+      "han": "火",
+      "pinyin": "huǒ",
+      "tones": [
+        3
+      ],
+      "accept": [
+        "huǒ"
+      ]
+    },
+    {
+      "id": "s11",
+      "han": "山",
+      "pinyin": "shān",
+      "tones": [
+        1
+      ],
+      "accept": [
+        "shān"
+      ]
+    },
+    {
+      "id": "s12",
+      "han": "人",
+      "pinyin": "rén",
+      "tones": [
+        2
+      ],
+      "accept": [
+        "rén"
+      ]
+    },
+    {
+      "id": "s13",
+      "han": "大",
+      "pinyin": "dà",
+      "tones": [
+        4
+      ],
+      "accept": [
+        "dà"
+      ]
+    },
+    {
+      "id": "s14",
+      "han": "小",
+      "pinyin": "xiǎo",
+      "tones": [
+        3
+      ],
+      "accept": [
+        "xiǎo"
+      ]
+    },
+    {
+      "id": "s15",
+      "han": "上",
+      "pinyin": "shàng",
+      "tones": [
+        4
+      ],
+      "accept": [
+        "shàng"
+      ]
+    },
+    {
+      "id": "s16",
+      "han": "下",
+      "pinyin": "xià",
+      "tones": [
+        4
+      ],
+      "accept": [
+        "xià"
+      ]
+    },
+    {
+      "id": "s17",
+      "han": "中",
+      "pinyin": "zhōng",
+      "tones": [
+        1
+      ],
+      "accept": [
+        "zhōng"
+      ]
+    },
+    {
+      "id": "s18",
+      "han": "國",
+      "pinyin": "guó",
+      "tones": [
+        2
+      ],
+      "accept": [
+        "guó"
+      ]
+    },
+    {
+      "id": "s19",
+      "han": "中國",
+      "pinyin": "Zhōngguó",
+      "tones": [
+        1,
+        2
+      ],
+      "accept": [
+        "zhōngguó"
+      ]
+    },
+    {
+      "id": "s20",
+      "han": "香港",
+      "pinyin": "Xiānggǎng",
+      "tones": [
+        1,
+        3
+      ],
+      "accept": [
+        "xiānggǎng"
+      ]
+    },
+    {
+      "id": "s21",
+      "han": "學校",
+      "pinyin": "xuéxiào",
+      "tones": [
+        2,
+        4
+      ],
+      "accept": [
+        "xuéxiào"
+      ]
+    },
+    {
+      "id": "s22",
+      "han": "書",
+      "pinyin": "shū",
+      "tones": [
+        1
+      ],
+      "accept": [
+        "shū"
+      ]
+    },
+    {
+      "id": "s23",
+      "han": "寫字",
+      "pinyin": "xiězì",
+      "tones": [
+        3,
+        4
+      ],
+      "accept": [
+        "xiězì"
+      ]
+    },
+    {
+      "id": "s24",
+      "han": "讀書",
+      "pinyin": "dúshū",
+      "tones": [
+        2,
+        1
+      ],
+      "accept": [
+        "dúshū"
+      ]
+    },
+    {
+      "id": "s25",
+      "han": "吃",
+      "pinyin": "chī",
+      "tones": [
+        1
+      ],
+      "accept": [
+        "chī"
+      ]
+    },
+    {
+      "id": "s26",
+      "han": "喝",
+      "pinyin": "hē",
+      "tones": [
+        1
+      ],
+      "accept": [
+        "hē"
+      ]
+    },
+    {
+      "id": "s27",
+      "han": "走路",
+      "pinyin": "zǒulù",
+      "tones": [
+        3,
+        4
+      ],
+      "accept": [
+        "zǒulù"
+      ]
+    },
+    {
+      "id": "s28",
+      "han": "跑步",
+      "pinyin": "pǎobù",
+      "tones": [
+        3,
+        4
+      ],
+      "accept": [
+        "pǎobù"
+      ]
+    },
+    {
+      "id": "s29",
+      "han": "月亮",
+      "pinyin": "yuèliang",
+      "tones": [
+        4,
+        0
+      ],
+      "accept": [
+        "yuèliang",
+        "yuèliàng"
+      ]
+    },
+    {
+      "id": "s30",
+      "han": "太陽",
+      "pinyin": "tàiyáng",
+      "tones": [
+        4,
+        2
+      ],
+      "accept": [
+        "tàiyáng"
+      ]
+    },
+    {
+      "id": "s31",
+      "han": "星星",
+      "pinyin": "xīngxing",
+      "tones": [
+        1,
+        0
+      ],
+      "accept": [
+        "xīngxing",
+        "xīngxīng"
+      ]
+    },
+    {
+      "id": "s32",
+      "han": "花",
+      "pinyin": "huā",
+      "tones": [
+        1
+      ],
+      "accept": [
+        "huā"
+      ]
+    },
+    {
+      "id": "s33",
+      "han": "鳥",
+      "pinyin": "niǎo",
+      "tones": [
+        3
+      ],
+      "accept": [
+        "niǎo"
+      ]
+    },
+    {
+      "id": "s34",
+      "han": "魚",
+      "pinyin": "yú",
+      "tones": [
+        2
+      ],
+      "accept": [
+        "yú"
+      ]
+    },
+    {
+      "id": "s35",
+      "han": "快樂",
+      "pinyin": "kuàilè",
+      "tones": [
+        4,
+        4
+      ],
+      "accept": [
+        "kuàilè"
+      ]
+    },
+    {
+      "id": "s36",
+      "han": "音樂",
+      "pinyin": "yīnyuè",
+      "tones": [
+        1,
+        4
+      ],
+      "accept": [
+        "yīnyuè"
+      ]
+    },
+    {
+      "id": "s37",
+      "han": "銀行",
+      "pinyin": "yínháng",
+      "tones": [
+        2,
+        2
+      ],
+      "accept": [
+        "yínháng"
+      ]
+    },
+    {
+      "id": "s38",
+      "han": "行李",
+      "pinyin": "xíngli",
+      "tones": [
+        2,
+        0
+      ],
+      "accept": [
+        "xíngli",
+        "xínglǐ"
+      ]
+    },
+    {
+      "id": "s39",
+      "han": "長大",
+      "pinyin": "zhǎngdà",
+      "tones": [
+        3,
+        4
+      ],
+      "accept": [
+        "zhǎngdà"
+      ]
+    },
+    {
+      "id": "s40",
+      "han": "長城",
+      "pinyin": "Chángchéng",
+      "tones": [
+        2,
+        2
+      ],
+      "accept": [
+        "chángchéng"
+      ]
+    }
+  ],
+  "mode_copy": {
+    "A": {
+      "name": "點選拼音",
+      "intro": "看字詞，選出聲母、韻母和聲調。",
+      "prompt": "請為「{詞}」選出拼音。",
+      "correct": "答對了！",
+      "wrong": "不對。正確是：{正解帶調拼音}",
+      "set_done": "這組練習完成了，做得好！"
+    },
+    "B": {
+      "name": "認讀選擇",
+      "intro": "看拼音（或聽讀音），選出正確的字詞。",
+      "prompt_pinyin": "哪個字詞讀作 {帶調拼音}？",
+      "prompt_audio": "聽一聽，選出正確的字詞。",
+      "correct": "答對了！",
+      "wrong": "不對。正確是：{漢字}（{帶調拼音}）",
+      "set_done": "這組練習完成了，做得好！"
+    },
+    "C": {
+      "name": "組合拼音",
+      "intro": "用聲母、韻母和聲調，組合出正確的拼音。",
+      "prompt": "請拼出「{詞}」的拼音。",
+      "correct": "答對了！",
+      "wrong": "不對。正確是：{正解帶調拼音}",
+      "set_done": "這組練習完成了，做得好！"
+    }
+  },
+  "polyphone_policy": {
+    "rule": "只收小學／日常常見讀音；本題詞義下常見讀音皆可入 accept；不發明生僻讀音；判定只比 accept／word_accept",
+    "normalize": [
+      "lowercase",
+      "ü≡v",
+      "jqx後u≡ü",
+      "trim_spaces"
+    ]
+  }
+}
