@@ -4,7 +4,7 @@
 
 ## 頁面
 
-- `index.html` 練習頁。載入拼音 JSON。模式 A 是點選拼音；B／C 仍只渲染「即將推出」和 `mode_copy`。練習頁不登入。
+- `index.html` 練習頁。載入拼音 JSON。模式 A 是看字點選拼音。模式 C 用 `speechSynthesis`（`zh-CN`）朗讀詞語，再點聲母、韻母、聲調；作答前不顯示漢字。沒有朗讀時改為看字，並顯示說明。模式 B 仍只渲染「即將推出」和 `mode_copy`。練習頁不登入。
 - `admin.html` 家長頁。`signInWithEmailAndPassword(APP_CONFIG.parentEmail, 輸入的密碼)`。帳號是 `parent@pinyin-practice.local`。通過後 Firebase Auth 自己記住登入狀態。詞組和字詞的新增、修改、刪除走 `js/cloud.js`。練習紀錄只有這位家長讀得到；未登入不會向 Firestore 列出 `sessions`。更改密碼會先用目前密碼 `reauthenticateWithCredential`，再 `updatePassword`。
 
 ## 資料
@@ -25,7 +25,7 @@ Firestore（與本機形狀相同）：
 
 `js/grade.js` 在比對前：Unicode NFC、小寫、去掉空白和隔音號、`v` 改成 `ü`、j／q／x 緊接的 u 改成 ü（`iu` 不受影響，因為 u 不是緊跟在 j／q／x 後面）。
 
-模式 A 每個音節用點選的聲母、韻母、聲調，經 `PinyinGrade.spellSyllable` 後，對上該詞任一 `accept` 拆出來的同一字。聲母必須相同；j／q／x 後面的 u 與 ü 因拼寫歸一而視為同一。答錯立刻顯示該字首選帶調拼音。整組做完顯示 `set_done`。模式 B 以後比選項 id。模式 C 尚未寫。
+模式 A 每個音節用點選的聲母、韻母、聲調，經 `PinyinGrade.spellSyllable` 後，對上該詞任一 `accept` 拆出來的同一字。聲母必須相同；j／q／x 後面的 u 與 ü 因拼寫歸一而視為同一。答錯立刻顯示該字首選帶調拼音。整組做完顯示 `set_done`。模式 C 呼叫同一組 `ModeA.gradeSyllable`／`submit`，紀錄的 `mode` 是 `C`。模式 B 以後比選項 id。
 
 標調位置：有 a 標 a，否則有 e 標 e，否則 `ou` 標 o，否則標第二個元音（`iu` 標 u、`ui` 標 i）。輕聲不加調號。j／q／x 後 ü 寫成 u；零聲母的 i、u、ü 寫成 y、w、yu。
 
@@ -48,4 +48,4 @@ Firestore（與本機形狀相同）：
 
 ## 快取
 
-`sw.js` 的 `VERSION` 目前是 `v3`。導覽先走網路，其餘靜態檔先用快取。換檔後要加大版本號。Firebase SDK 來自 CDN，不進這個快取。
+`sw.js` 的 `VERSION` 目前是 `v4`。導覽先走網路，其餘靜態檔先用快取。換檔後要加大版本號。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。

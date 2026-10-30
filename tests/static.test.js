@@ -198,8 +198,8 @@ function walk(dir) {
 }
 walk(root);
 
-assert.ok(read("sw.js").indexOf('var VERSION = "v3"') > 0);
-assert.ok(read("README.md").indexOf("`v3`") > 0);
+assert.ok(read("sw.js").indexOf('var VERSION = "v4"') > 0);
+assert.ok(read("README.md").indexOf("`v4`") > 0);
 var manifest = JSON.parse(read("manifest.webmanifest"));
 assert.strictEqual(manifest.name, "普通話拼音練習");
 assert.strictEqual(manifest.lang, "zh-Hant");
@@ -214,7 +214,12 @@ assert.ok(read("js/modes/b.js").indexOf("copy.name") > 0);
 assert.ok(read("js/modes/c.js").indexOf("copy.name") > 0);
 assert.ok(read("js/modes/a.js").indexOf("即將推出") < 0);
 assert.ok(read("js/modes/b.js").indexOf("即將推出") > 0);
-assert.ok(read("js/modes/c.js").indexOf("即將推出") > 0);
+assert.ok(read("js/modes/c.js").indexOf("即將推出") < 0);
+assert.ok(read("js/modes/c.js").indexOf("speechSynthesis") > 0);
+assert.ok(read("js/modes/c.js").indexOf("zh-CN") > 0);
+assert.ok(read("js/modes/c.js").indexOf('record.mode = "C"') > 0);
+assert.ok(read("js/app.js").indexOf("字和拼音先不顯示") > 0);
+assert.ok(read("js/app.js").indexOf("createSession") > 0);
 assert.ok(!/textContent\s*=\s*"點選拼音"/.test(read("js/modes/a.js")));
 assert.ok(read("js/modes/a.js").indexOf("PinyinGrade") > 0 || read("js/modes/a.js").indexOf("gradeSyllable") > 0);
 

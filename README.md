@@ -8,7 +8,8 @@
 
 - 練習頁 `index.html`：選詞組，再選練習方式。
   - A 點選拼音：看字詞，依每個字點聲母、韻母、聲調。答錯立刻看到帶調拼音，做完選定的詞組就結束。
-  - B 認讀選擇、C 組合拼音：仍是「即將推出」。
+  - C 組合拼音：先聽詞語，再依每個字點聲母、韻母、聲調。作答前不顯示漢字；答完該詞才顯示字和帶調拼音。答錯立刻看到正確拼音。
+  - B 認讀選擇：仍是「即將推出」。
 - 家長頁 `admin.html`：用 Firebase 家長帳號登入後，可以新增、修改、刪除詞組和字詞。
 - 練習頁不登入。字詞讀取和練習紀錄的新增都不需要家長密碼。
 
@@ -28,7 +29,7 @@ python3 -m http.server 8080
 
 這是 2026-10-30 的專家交付 v1。`js/pinyin-tables.js` 只負責載入，不另抄一份表。
 
-判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、j／q／x 後面的 u 與 ü 相同。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。模式 A 把點選結果送進同一個 `PinyinGrade`，不另寫一套判定。
+判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、j／q／x 後面的 u 與 ü 相同。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。模式 A 與模式 C 都把點選結果送進同一個 `PinyinGrade`，不另寫一套判定。
 
 ## Firebase
 
@@ -106,7 +107,17 @@ node scripts/seed-firestore.js --print
 
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v3`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
+`sw.js` 的 `VERSION` 目前是 `v4`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
+
+## 聽讀（模式 C）
+
+模式 C 用瀏覽器的 `speechSynthesis`，語句語言固定為 `zh-CN`。聲線清單裡若有普通話（`zh-CN`，或標成 `cmn-Hans-CN`）會優先用它；否則才退到其他中文聲線。沒有中文聲線時不改掛英文聲線，仍以 `zh-CN` 請瀏覽器朗讀。重播讀的是整詞，不是單字。
+
+- 有的瀏覽器要使用者先按一下才出聲（尤其 iPhone／iPad 的 Safari）。畫面有「再聽一次」。
+- 聲線清單可能晚一點才到。第一次若還沒有普通話聲線，`voiceschanged` 之後會再讀一次。
+- 多音字讀哪一個音由語音引擎決定，可能和詞義不一致。判定仍只看該詞的 `accept`。
+- 很長的句子有時會被瀏覽器中途暫停。這裡每次只讀一個詞。
+- 這個瀏覽器完全不能朗讀時，會顯示繁體說明，並把字顯示出來，練習可以繼續。詞組清單在模式 C 不列出字和拼音，避免作答前看到答案。
 
 ## 測試
 
@@ -114,5 +125,6 @@ node scripts/seed-firestore.js --print
 node tests/grade.test.js
 node tests/cloud.test.js
 node tests/mode-a.test.js
+node tests/mode-c.test.js
 node tests/static.test.js
 ```
