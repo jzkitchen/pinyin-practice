@@ -1,4 +1,4 @@
-/* 練習頁。選詞組、選模式。模式 A 點選拼音；B／C 仍是骨架。練習頁不登入。 */
+/* 練習頁。選詞組、選模式。模式 A 看字點選；模式 C 聽讀後點選。模式 B 仍是骨架。練習頁不登入。 */
 (function () {
   "use strict";
 
@@ -148,13 +148,15 @@
     var count = document.createElement("p");
     count.className = "hint";
     count.textContent = state.words.length
-      ? (state.mode === "A"
-        ? "共 " + state.words.length + " 個。拼音在練習裡作答。"
-        : "共 " + state.words.length + " 個")
+      ? (state.mode === "C"
+        ? "共 " + state.words.length + " 個。請聽聲音作答，字和拼音先不顯示。"
+        : state.mode === "A"
+          ? "共 " + state.words.length + " 個。拼音在練習裡作答。"
+          : "共 " + state.words.length + " 個")
       : "這個詞組還沒有字詞。";
     var list = document.createElement("ul");
     list.className = "word-list";
-    state.words.forEach(function (word) {
+    if (state.mode !== "C") state.words.forEach(function (word) {
       var item = document.createElement("li");
       item.className = "word-card";
       var han = document.createElement("span");
@@ -182,7 +184,8 @@
       }
       list.appendChild(item);
     });
-    listCard.append(heading, count, list);
+    if (state.mode === "C") listCard.append(heading, count);
+    else listCard.append(heading, count, list);
 
     var details = document.createElement("details");
     details.className = "card";
