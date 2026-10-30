@@ -110,7 +110,175 @@ async function main() {
     readings: [{ initial: "m", final: "ao", tone: 1 }]
   }), /漢字/);
 
+  var remote = loadCloud();
+  var db = mockFirestore();
+  var auth = mockAuth("secret");
+  remote.init(Object.assign({}, config, { storage: "firebase" }), {
+    grade: Grade,
+    tables: data,
+    storage: memoryStorage(),
+    firestore: db,
+    auth: auth
+  });
+  assert.strictEqual(remote.firebaseConfigured(), true);
+  assert.strictEqual(remote.bundledDemo(), false);
+  assert.strictEqual((await remote.listSets()).length, 0);
+  await assert.rejects(remote.signIn("parent@example.com", "nope"), function (err) {
+    assert.strictEqual(err.code, "auth/wrong-password");
+    return true;
+  });
+  var signed = await remote.signIn("parent@example.com", "secret");
+  assert.strictEqual(signed.email, "parent@example.com");
+  var made = await remote.createSet("動物");
+  assert.strictEqual(made.name, "動物");
+  assert.ok(db.rows.sets.has(made.id));
+  var listed = await remote.listSets();
+  assert.strictEqual(listed.find(function (set) { return set.id === made.id; }).name, "動物");
+  var cat = await remote.createWord({
+    setId: made.id,
+    hanzi: "貓",
+    pinyin: "māo",
+    tones: [1],
+    accept: ["māo"],
+    readings: [{ initial: "m", final: "ao", tone: 1 }],
+    note: ""
+  });
+  assert.strictEqual((await remote.listWords(made.id)).length, 1);
+  assert.strictEqual((await remote.listWords("set_demo")).length, 0);
+  await remote.updateWord(cat.id, {
+    setId: made.id,
+    hanzi: "小貓",
+    pinyin: "xiǎomāo",
+    tones: [3, 1],
+    accept: ["xiǎomāo"],
+    readings: [
+      { initial: "x", final: "iao", tone: 3 },
+      { initial: "m", final: "ao", tone: 1 }
+    ],
+    note: "",
+    createdAt: cat.createdAt
+  });
+  assert.strictEqual((await remote.listWords(made.id))[0].hanzi, "小貓");
+  var seeded = await remote.importDemoSet();
+  assert.strictEqual(seeded.created, true);
+  assert.strictEqual((await remote.listWords("set_demo")).length, 40);
+  assert.strictEqual((await remote.importDemoSet()).created, false);
+  var practice = await remote.createSession({
+    mode: "A",
+    setId: "set_demo",
+    total: 1,
+    correct: 1,
+    durationMs: 10,
+    startedAt: "2026-10-30T02:00:00.000Z"
+  });
+  assert.strictEqual((await remote.listSessions())[0].id, practice.id);
+  assert.ok(db.rows.sessions.has(practice.id));
+  await remote.deleteWord(cat.id);
+  await remote.deleteSet(made.id);
+  assert.strictEqual((await remote.listWords(made.id)).length, 0);
+  assert.ok(!db.rows.sets.has(made.id));
+  await remote.signOut();
+  assert.strictEqual(auth.currentUser, null);
+
+  var offline = loadCloud();
+  offline.init(Object.assign({}, config, { storage: "firebase" }), {
+    grade: Grade,
+    tables: data,
+    storage: memoryStorage(),
+    firebaseConfig: { apiKey: "TODO", projectId: "TODO" }
+  });
+  assert.strictEqual(offline.firebaseConfigured(), false);
+  assert.strictEqual(offline.bundledDemo(), true);
+  var offlineSets = await offline.listSets();
+  assert.strictEqual(offlineSets[0].id, "set_demo");
+  assert.strictEqual(offlineSets[0].name, "範例");
+  assert.strictEqual((await offline.listWords("set_demo")).length, 40);
+  assert.strictEqual((await offline.listWords("set_demo"))[0].hanzi, "媽媽");
+  await assert.rejects(offline.createSet("動物"), /雲端尚未設定/);
+  await assert.rejects(offline.importDemoSet(), /雲端尚未設定/);
+  await assert.rejects(offline.signIn("parent@example.com", "secret"), /雲端尚未設定/);
+
   console.log("cloud tests passed");
+}
+
+function mockFirestore() {
+  var rows = { sets: new Map(), words: new Map(), sessions: new Map() };
+  function collection(name) {
+    return {
+      get: function () {
+        var docs = [];
+        rows[name].forEach(function (data, id) {
+          docs.push({ id: id, data: function () { return Object.assign({}, data); } });
+        });
+        return Promise.resolve({ docs: docs });
+      },
+      where: function (field, op, value) {
+        return {
+          get: function () {
+            var docs = [];
+            rows[name].forEach(function (data, id) {
+              if (op === "==" && data[field] === value) {
+                docs.push({ id: id, data: function () { return Object.assign({}, data); } });
+              }
+            });
+            return Promise.resolve({ docs: docs });
+          }
+        };
+      },
+      doc: function (id) {
+        return {
+          set: function (data) {
+            rows[name].set(id, Object.assign({}, data));
+            return Promise.resolve();
+          },
+          delete: function () {
+            rows[name].delete(id);
+            return Promise.resolve();
+          },
+          get: function () {
+            var data = rows[name].get(id);
+            return Promise.resolve({
+              exists: !!data,
+              id: id,
+              data: function () { return data ? Object.assign({}, data) : null; }
+            });
+          }
+        };
+      }
+    };
+  }
+  return { collection: collection, rows: rows };
+}
+
+function mockAuth(password) {
+  var state = { currentUser: null, password: password };
+  return {
+    get currentUser() { return state.currentUser; },
+    signInWithEmailAndPassword: function (email, pw) {
+      if (pw !== state.password) {
+        var err = new Error("wrong");
+        err.code = "auth/wrong-password";
+        return Promise.reject(err);
+      }
+      state.currentUser = {
+        email: email,
+        uid: "parent",
+        updatePassword: function (next) {
+          state.password = next;
+          return Promise.resolve();
+        }
+      };
+      return Promise.resolve({ user: state.currentUser });
+    },
+    signOut: function () {
+      state.currentUser = null;
+      return Promise.resolve();
+    },
+    onAuthStateChanged: function (cb) {
+      cb(state.currentUser);
+      return function () {};
+    }
+  };
 }
 
 main().catch(function (err) {

@@ -1,4 +1,5 @@
-/* Cloudflare Worker。GitHub Pages 不執行這個檔。
+/* DEPRECATED：不要部署這個 Worker。雲端改走 Firebase。見 worker/DEPRECATED.md。
+ * Cloudflare Worker。GitHub Pages 不執行這個檔。
  * 讀取詞組不必登入，讓練習頁在 api 模式可以開。
  * 新增、修改、刪除要帶標頭 X-Admin-Password-Sha256，
  * 值必須等於環境變數 ADMIN_PASSWORD_SHA256（與 js/config.js 同一個校驗碼）。

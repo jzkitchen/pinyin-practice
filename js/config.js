@@ -1,16 +1,14 @@
-/* 儲存後端與管理員校驗。
- * storage: "local" 用這台裝置的 localStorage（GitHub Pages 預設，Worker 未上線也能用）。
- * storage: "api"  呼叫 apiBase 上的 Cloudflare Worker。
- * adminPasswordSha256 是密碼 UTF-8 位元組的 SHA-256 十六進位，不是密碼本身。
- * 更換方式見 README。不要把密碼明文寫進這個檔案。
+/* 儲存後端。
+ * storage: "firebase" 用 Firestore（預設）。公開的 Firebase 設定在 js/firebase-config.js。
+ * storage: "local" 只用這台裝置的 localStorage，給離線開發和測試。
+ * 前端不存放家長密碼，也不存放預期的校驗碼。
  */
 var APP_CONFIG = {
-  storage: "local",
-  apiBase: "",
-  adminPasswordSha256: "4cc69e6c10d10a0a8172a5a4c34a2b7f94476b447218564ce8a3c109849c43e2",
+  storage: "firebase",
   dataUrl: "data/pinyin_tables_and_seeds_v1.json",
   demoSetId: "set_demo",
-  demoSetName: "範例"
+  demoSetName: "範例",
+  parentEmail: "parent@pinyin-practice.local"
 };
 
 if (typeof module === "object" && module.exports) module.exports = APP_CONFIG;

@@ -1,9 +1,9 @@
-/* 練習頁。選詞組、選模式，列出字詞。模式 A／B／C 只顯示骨架。 */
+/* 練習頁。選詞組、選模式。模式 A 點選拼音；B／C 仍是骨架。練習頁不登入。 */
 (function () {
   "use strict";
 
   var MODES = { A: ModeA, B: ModeB, C: ModeC };
-  var state = { setId: null, mode: "A", sets: [], words: [] };
+  var state = { setId: null, mode: "A", sets: [], words: [], preview: false, previewMessage: "" };
 
   var root = document.getElementById("practice-root");
   var statusNode = document.getElementById("status");
@@ -129,7 +129,17 @@
     panel.className = "card mode-panel";
     panel.setAttribute("aria-live", "polite");
     var sample = state.words[0] || null;
-    MODES[state.mode].mount(panel, { copy: copy, sample: sample, words: state.words });
+    MODES[state.mode].mount(panel, {
+      copy: copy,
+      sample: sample,
+      words: state.words,
+      tables: data,
+      setId: state.setId,
+      onDone: function (record) {
+        if (!record || !record.setId) return Promise.resolve();
+        return PinyinCloud.createSession(record).catch(function () {});
+      }
+    });
 
     var listCard = document.createElement("section");
     listCard.className = "card";
@@ -137,7 +147,11 @@
     heading.textContent = "這個詞組的字詞";
     var count = document.createElement("p");
     count.className = "hint";
-    count.textContent = state.words.length ? "共 " + state.words.length + " 個" : "這個詞組還沒有字詞。";
+    count.textContent = state.words.length
+      ? (state.mode === "A"
+        ? "共 " + state.words.length + " 個。拼音在練習裡作答。"
+        : "共 " + state.words.length + " 個")
+      : "這個詞組還沒有字詞。";
     var list = document.createElement("ul");
     list.className = "word-list";
     state.words.forEach(function (word) {
@@ -146,10 +160,15 @@
       var han = document.createElement("span");
       han.className = "han";
       han.textContent = word.hanzi;
+      item.appendChild(han);
+      if (state.mode === "A") {
+        list.appendChild(item);
+        return;
+      }
       var py = document.createElement("span");
       py.className = "py";
       py.textContent = word.pinyin;
-      item.append(han, py);
+      item.appendChild(py);
       if (word.accept && word.accept.length > 1) {
         var extras = word.accept.filter(function (itemText) {
           return PinyinGrade.normalizePinyin(itemText) !== PinyinGrade.normalizePinyin(word.pinyin);
@@ -180,10 +199,32 @@
       render();
       return Promise.resolve();
     }
+    if (state.preview) {
+      var catalog = PinyinCloud.demoCatalog();
+      state.words = state.setId === catalog.set.id ? catalog.words : [];
+      render();
+      return Promise.resolve();
+    }
     return PinyinCloud.listWords(state.setId).then(function (words) {
       state.words = words;
       render();
     });
+  }
+
+  function settleSets(sets) {
+    if (sets && sets.length) {
+      state.preview = false;
+      state.previewMessage = "";
+      return sets;
+    }
+    if (!APP_CONFIG || APP_CONFIG.storage !== "firebase") {
+      state.preview = false;
+      state.previewMessage = "";
+      return sets || [];
+    }
+    state.preview = true;
+    state.previewMessage = "雲端詞組尚未就緒，現在練習內建範例。";
+    return [PinyinCloud.demoCatalog().set];
   }
 
   function boot() {
@@ -191,7 +232,13 @@
     PinyinTables.load(APP_CONFIG.dataUrl).then(function (data) {
       PinyinGrade.init(data);
       PinyinCloud.init(APP_CONFIG, { tables: data });
+      return PinyinCloud.connect();
+    }).then(function () {
       return PinyinCloud.seedIfEmpty();
+    }).then(function (sets) {
+      return settleSets(sets);
+    }).catch(function () {
+      return settleSets(null);
     }).then(function (sets) {
       state.sets = sets;
       var saved = sessionStorage.getItem("practiceSetId");
@@ -199,7 +246,7 @@
       if (savedMode === "A" || savedMode === "B" || savedMode === "C") state.mode = savedMode;
       if (saved && sets.some(function (set) { return set.id === saved; })) state.setId = saved;
       else if (sets[0]) state.setId = sets[0].id;
-      setStatus("");
+      setStatus(state.preview ? state.previewMessage : "");
       return loadWords();
     }).catch(function (err) {
       setStatus(err.message || "載入失敗", "bad");

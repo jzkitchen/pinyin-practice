@@ -31,6 +31,9 @@ var required = [
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/apple-touch-icon.png",
+  "js/firebase-config.js",
+  "firestore.rules",
+  "worker/DEPRECATED.md",
   "worker/src/index.js",
   "worker/schema.sql",
   "worker/wrangler.toml.example",
@@ -43,27 +46,63 @@ required.forEach(function (rel) {
 });
 
 var config = read("js/config.js");
-assert.ok(config.indexOf('adminPasswordSha256: "4cc69e6c10d10a0a8172a5a4c34a2b7f94476b447218564ce8a3c109849c43e2"') > 0);
-assert.ok(config.indexOf('storage: "local"') > 0);
-assert.strictEqual((config.match(/4cc69e6c10d10a0a8172a5a4c34a2b7f94476b447218564ce8a3c109849c43e2/g) || []).length, 1);
+assert.ok(config.indexOf('storage: "firebase"') > 0);
+assert.ok(config.indexOf("apiBase") < 0);
+assert.ok(config.indexOf("adminPasswordSha256") < 0);
+assert.ok(read("js/admin.js").indexOf("adminPasswordSha256") < 0);
+assert.ok(read("js/admin.js").indexOf("signIn") > 0);
+assert.ok(read("js/cloud.js").indexOf("signInWithEmailAndPassword") > 0);
+assert.ok(read("js/cloud.js").indexOf("apiBase") < 0);
+assert.ok(read("js/cloud.js").indexOf("X-Admin-Password-Sha256") < 0);
+assert.ok(read("js/cloud.js").indexOf('collection("sets")') > 0);
+assert.ok(read("js/cloud.js").indexOf('collection("words")') > 0);
+assert.ok(read("js/cloud.js").indexOf('collection("sessions")') > 0);
+assert.ok(read("admin.html").indexOf("雲端尚未設定") > 0);
+assert.ok(read("js/config.js").indexOf("parent@pinyin-practice.local") > 0);
+assert.ok(read("js/admin.js").indexOf("parentEmail") > 0);
+var firebaseConfig = read("js/firebase-config.js");
+assert.ok(firebaseConfig.indexOf('apiKey: "AIzaSyDJiADxpTPBTZlIYMBmIzEM90D6m0EIHjc"') > 0);
+assert.ok(firebaseConfig.indexOf('projectId: "pinyin-practice-eabd1"') > 0);
+assert.ok(firebaseConfig.indexOf('authDomain: "pinyin-practice-eabd1.firebaseapp.com"') > 0);
+assert.ok(firebaseConfig.indexOf("TODO") < 0);
+var rules = read("firestore.rules");
+assert.ok(rules.indexOf("request.auth") > 0);
+assert.ok(/match\s+\/sets\/\{id\}/.test(rules));
+assert.ok(/match\s+\/words\/\{id\}/.test(rules));
+assert.ok(/match\s+\/sessions\/\{id\}/.test(rules));
+assert.ok(rules.indexOf("allow read: if true") > 0);
+assert.ok(rules.indexOf("allow write: if request.auth != null") > 0);
+assert.ok(/match\s+\/sessions\/\{id\}[\s\S]*?allow read:\s*if true/.test(rules));
+assert.ok(/match\s+\/sessions\/\{id\}[\s\S]*?allow create:\s*if true/.test(rules));
+var sessionRules = rules.split("match /sessions/{id}")[1].split("match /")[0];
+assert.ok(sessionRules.indexOf("update") < 0, "sessions 不開放 update");
+assert.ok(sessionRules.indexOf("delete") < 0, "sessions 不開放 delete");
+assert.ok(read("README.md").indexOf("Firebase") > 0);
+assert.ok(read("README.md").indexOf("js/firebase-config.js") > 0);
+assert.ok(read("README.md").indexOf("firestore.rules") > 0);
+assert.ok(read("README.md").indexOf("wrangler secret put") < 0);
+assert.ok(read("TECH.md").indexOf("Firebase") > 0);
+assert.ok(read("TECH.md").indexOf("wrangler secret put") < 0);
+assert.ok(read("worker/DEPRECATED.md").indexOf("DEPRECATED") > 0);
 
-var hash = "4cc69e6c10d10a0a8172a5a4c34a2b7f94476b447218564ce8a3c109849c43e2";
+var hash = ["4cc69e6c10d10a0a", "8172a5a4c34a2b7f", "94476b447218564c", "e8a3c109849c43e2"].join("");
 function walk(dir) {
   fs.readdirSync(dir, { withFileTypes: true }).forEach(function (entry) {
-    if (entry.name === ".git" || entry.name === "node_modules" || entry.name === "tests") return;
+    if (entry.name === ".git" || entry.name === "node_modules") return;
     var full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full);
     else if (/\.(js|md|html|css|json|sql|example|webmanifest)$/.test(entry.name) || entry.name === ".gitignore") {
       var text = fs.readFileSync(full, "utf8");
       var rel = path.relative(root, full);
-      if (rel !== "js/config.js") assert.ok(text.indexOf(hash) < 0, "校驗碼不應出現在 " + rel);
+      assert.ok(text.indexOf(hash) < 0, "校驗碼不應出現在 " + rel);
       assert.ok(!/adminPassword"\s*:/.test(text), rel);
+      assert.ok(!/adminPasswordSha256"\s*:/.test(text), rel);
     }
   });
 }
 walk(root);
 
-assert.ok(read("sw.js").indexOf('var VERSION = "v1"') > 0);
+assert.ok(read("sw.js").indexOf('var VERSION = "v2"') > 0);
 var manifest = JSON.parse(read("manifest.webmanifest"));
 assert.strictEqual(manifest.name, "普通話拼音練習");
 assert.strictEqual(manifest.lang, "zh-Hant");
@@ -71,13 +110,16 @@ assert.ok(read("worker/src/index.js").indexOf(hash) < 0);
 assert.ok(read("worker/schema.sql").indexOf("CREATE TABLE IF NOT EXISTS sets") > 0);
 assert.ok(read("worker/schema.sql").indexOf("CREATE TABLE IF NOT EXISTS words") > 0);
 assert.ok(read("worker/schema.sql").indexOf("CREATE TABLE IF NOT EXISTS sessions") > 0);
-assert.ok(read("README.md").indexOf("adminPasswordSha256") > 0);
 assert.ok(read("README.md").indexOf("data/pinyin_tables_and_seeds_v1.json") > 0);
+assert.ok(read("README.md").indexOf("範例") > 0);
 assert.ok(read("js/modes/a.js").indexOf("copy.name") > 0);
 assert.ok(read("js/modes/b.js").indexOf("copy.name") > 0);
 assert.ok(read("js/modes/c.js").indexOf("copy.name") > 0);
-assert.ok(read("js/modes/a.js").indexOf("即將推出") > 0);
+assert.ok(read("js/modes/a.js").indexOf("即將推出") < 0);
+assert.ok(read("js/modes/b.js").indexOf("即將推出") > 0);
+assert.ok(read("js/modes/c.js").indexOf("即將推出") > 0);
 assert.ok(!/textContent\s*=\s*"點選拼音"/.test(read("js/modes/a.js")));
+assert.ok(read("js/modes/a.js").indexOf("PinyinGrade") > 0 || read("js/modes/a.js").indexOf("gradeSyllable") > 0);
 
 async function hashSamples() {
   for (var sample of ["abc", "拼音"]) {
