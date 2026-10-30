@@ -61,7 +61,7 @@
     app.replaceChildren();
     var intro = document.createElement("p");
     intro.className = "hint";
-    intro.textContent = "儲存位置：" + storageLabel() + "。點選拼音可以練習。認讀選擇和組合拼音尚未開放。";
+    intro.textContent = "儲存位置：" + storageLabel() + "。點選拼音（模式 A）與組合拼音（模式 C）已可練習；認讀選擇（模式 B）尚未開放。";
 
     var logout = document.createElement("button");
     logout.type = "button";
