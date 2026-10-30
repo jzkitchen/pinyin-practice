@@ -1,0 +1,13 @@
+name = "pinyin-practice"
+main = "src/index.js"
+compatibility_date = "2026-10-30"
+
+# 複製本檔為 wrangler.toml 後，把 database_id 換成 wrangler d1 create 印出的值。
+# 不要把管理員密碼或它的校驗碼寫進這個檔。校驗碼用：
+#   wrangler secret put ADMIN_PASSWORD_SHA256
+# 值與 js/config.js 的 adminPasswordSha256 相同。
+
+[[d1_databases]]
+binding = "DB"
+database_name = "pinyin-practice"
+database_id = "REPLACE_ME"
