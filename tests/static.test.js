@@ -60,11 +60,15 @@ assert.ok(read("js/cloud.js").indexOf('collection("sessions")') > 0);
 assert.ok(read("admin.html").indexOf("雲端尚未設定") > 0);
 assert.ok(read("js/config.js").indexOf("parent@pinyin-practice.local") > 0);
 assert.ok(read("js/admin.js").indexOf("parentEmail") > 0);
-var firebaseConfig = read("js/firebase-config.js");
-assert.ok(firebaseConfig.indexOf('apiKey: "AIzaSyDJiADxpTPBTZlIYMBmIzEM90D6m0EIHjc"') > 0);
-assert.ok(firebaseConfig.indexOf('projectId: "pinyin-practice-eabd1"') > 0);
-assert.ok(firebaseConfig.indexOf('authDomain: "pinyin-practice-eabd1.firebaseapp.com"') > 0);
-assert.ok(firebaseConfig.indexOf("TODO") < 0);
+var firebaseConfig = require(path.join(root, "js/firebase-config.js"));
+assert.strictEqual(typeof firebaseConfig.apiKey, "string");
+assert.ok(firebaseConfig.apiKey.length > 0, "apiKey 必須是非空字串");
+assert.ok(/^AIza[0-9A-Za-z_-]+$/.test(firebaseConfig.apiKey), "apiKey 格式");
+["projectId", "authDomain", "appId"].forEach(function (field) {
+  assert.strictEqual(typeof firebaseConfig[field], "string", field);
+  assert.ok(firebaseConfig[field].length > 0, field + " 必須存在");
+});
+assert.ok(read("js/firebase-config.js").indexOf("TODO") < 0);
 var rules = read("firestore.rules");
 assert.ok(rules.indexOf("request.auth") > 0);
 assert.ok(/match\s+\/sets\/\{id\}/.test(rules));
@@ -85,7 +89,6 @@ assert.ok(read("TECH.md").indexOf("Firebase") > 0);
 assert.ok(read("TECH.md").indexOf("wrangler secret put") < 0);
 assert.ok(read("worker/DEPRECATED.md").indexOf("DEPRECATED") > 0);
 
-var hash = ["4cc69e6c10d10a0a", "8172a5a4c34a2b7f", "94476b447218564c", "e8a3c109849c43e2"].join("");
 function walk(dir) {
   fs.readdirSync(dir, { withFileTypes: true }).forEach(function (entry) {
     if (entry.name === ".git" || entry.name === "node_modules") return;
@@ -94,7 +97,9 @@ function walk(dir) {
     else if (/\.(js|md|html|css|json|sql|example|webmanifest)$/.test(entry.name) || entry.name === ".gitignore") {
       var text = fs.readFileSync(full, "utf8");
       var rel = path.relative(root, full);
-      assert.ok(text.indexOf(hash) < 0, "校驗碼不應出現在 " + rel);
+      if (rel !== "js/firebase-config.js") {
+        assert.ok(!/AIza[0-9A-Za-z_-]{35}/.test(text), "API key 不應出現在 " + rel);
+      }
       assert.ok(!/adminPassword"\s*:/.test(text), rel);
       assert.ok(!/adminPasswordSha256"\s*:/.test(text), rel);
     }
@@ -106,7 +111,7 @@ assert.ok(read("sw.js").indexOf('var VERSION = "v2"') > 0);
 var manifest = JSON.parse(read("manifest.webmanifest"));
 assert.strictEqual(manifest.name, "普通話拼音練習");
 assert.strictEqual(manifest.lang, "zh-Hant");
-assert.ok(read("worker/src/index.js").indexOf(hash) < 0);
+assert.ok(read("worker/src/index.js").indexOf("adminPasswordSha256") < 0);
 assert.ok(read("worker/schema.sql").indexOf("CREATE TABLE IF NOT EXISTS sets") > 0);
 assert.ok(read("worker/schema.sql").indexOf("CREATE TABLE IF NOT EXISTS words") > 0);
 assert.ok(read("worker/schema.sql").indexOf("CREATE TABLE IF NOT EXISTS sessions") > 0);
