@@ -234,17 +234,63 @@
     });
   }
 
-  function changePassword(nextPassword) {
+  function parentEmail() {
+    return String((ctx.config && ctx.config.parentEmail) || "").trim().toLowerCase();
+  }
+
+  function passwordCredential(email, password) {
+    var provider = null;
+    if (typeof firebase !== "undefined" && firebase.auth && firebase.auth.EmailAuthProvider) {
+      provider = firebase.auth.EmailAuthProvider;
+    } else if (ctx.auth && ctx.auth.EmailAuthProvider) {
+      provider = ctx.auth.EmailAuthProvider;
+    }
+    if (!provider || typeof provider.credential !== "function") return null;
+    return provider.credential(email, password);
+  }
+
+  function changePassword(nextPassword, currentPassword) {
     var next = String(nextPassword || "");
+    var current = String(currentPassword || "");
     if (next.length < 6) return Promise.reject(new Error("密碼至少 6 個字元"));
+    if (!current) return Promise.reject(new Error("請輸入目前密碼"));
     return connect({ auth: true }).then(function () {
       var user = ctx.auth && ctx.auth.currentUser;
       if (!user || typeof user.updatePassword !== "function") return Promise.reject(new Error("請先登入"));
-      return user.updatePassword(next).catch(function (err) {
+      if (typeof user.reauthenticateWithCredential !== "function") {
+        return Promise.reject(new Error("請先登出再登入，然後更改密碼。"));
+      }
+      var email = String(user.email || "").trim();
+      var expected = parentEmail();
+      if (!email || (expected && email.toLowerCase() !== expected)) {
+        return Promise.reject(new Error("請使用家長帳號"));
+      }
+      var credential = passwordCredential(email, current);
+      if (!credential) return Promise.reject(new Error("請先登出再登入，然後更改密碼。"));
+      return user.reauthenticateWithCredential(credential).then(function () {
+        return user.updatePassword(next);
+      }).catch(function (err) {
+        var code = err && err.code;
+        if (code === "auth/wrong-password" || code === "auth/invalid-credential" || code === "auth/invalid-login-credentials") {
+          var bad = new Error("目前密碼不正確。");
+          bad.code = code;
+          throw bad;
+        }
         var mapped = new Error(authMessage(err));
-        mapped.code = err && err.code;
+        mapped.code = code;
         throw mapped;
       });
+    });
+  }
+
+  function requireParent() {
+    return currentUser().then(function (user) {
+      var expected = parentEmail();
+      var email = String((user && user.email) || "").trim().toLowerCase();
+      if (!user || !expected || email !== expected) {
+        return Promise.reject(new Error("請先以家長帳號登入，才能查看練習紀錄。"));
+      }
+      return user;
     });
   }
 
@@ -323,11 +369,13 @@
       return Promise.resolve(sortSessions(readDb().sessions));
     }
     if (!firebaseConfigured()) return Promise.resolve([]);
-    return asCloud(needCloud().then(function () {
-      return ctx.db.collection("sessions").get();
-    }).then(function (snap) {
-      return sortSessions((snap.docs || []).map(fromDoc));
-    }));
+    return requireParent().then(function () {
+      return asCloud(needCloud().then(function () {
+        return ctx.db.collection("sessions").get();
+      }).then(function (snap) {
+        return sortSessions((snap.docs || []).map(fromDoc));
+      }));
+    });
   }
 
   function createSet(name) {

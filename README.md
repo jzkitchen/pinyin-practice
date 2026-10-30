@@ -1,6 +1,6 @@
 # 普通話拼音練習
 
-給小朋友的普通話拼音網頁。純 HTML、CSS、JavaScript，沒有框架，也沒有建置步驟。GitHub Pages 從 `main` 根目錄發佈。
+給小朋友的普通話拼音網頁。純 HTML、CSS、JavaScript，沒有框架。GitHub Pages 由 GitHub Actions 部署一份靜態檔清單，不是把倉庫根目錄整包公開。
 
 線上位置（啟用 Pages 之後）：<https://jzkitchen.github.io/pinyin-practice/>
 
@@ -44,9 +44,11 @@ python3 -m http.server 8080
 
 | 集合 | 誰可以讀 | 誰可以寫 |
 | --- | --- | --- |
-| `sets` | 所有人 | 已登入家長 |
-| `words` | 所有人 | 已登入家長 |
-| `sessions` | 所有人 | 所有人可新增；不可改、不可刪 |
+| `sets` | 所有人 | 只有已登入、且電郵為 `parent@pinyin-practice.local` 的家長可新增、修改、刪除 |
+| `words` | 所有人 | 同上 |
+| `sessions` | 只有該家長 | 任何人可新增，但只能寫規定欄位與範圍；不可改、不可刪 |
+
+`sessions` 新增時只接受 `id`、`startedAt`（`toISOString()` 的 24 字）、`durationMs`（0–86400000 的整數）、`mode`（`A`、`B` 或 `C`）、`setId`、`total`、`correct`（0–500，且 `correct` 不大於 `total`）。練習頁不登入也能新增。家長若在同一個瀏覽器仍登入著，練習頁一樣可以新增，因為規則看的是欄位，不是「必須未登入」。
 
 規則在 `firestore.rules`。其他路徑預設拒絕。部署：
 
@@ -66,7 +68,7 @@ npx firebase-tools deploy --only firestore:rules --project pinyin-practice-eabd1
 2. Users → Add user。電郵用 `parent@pinyin-practice.local`，密碼自己訂，不要提交到 git。
 3. 開啟 `admin.html`，輸入該密碼。
 
-更改密碼：登入家長頁後用「更改密碼」，或在主控台的該使用者上重設。前端沒有預期的校驗碼。
+更改密碼：登入家長頁後用「更改密碼」。表單會先問目前密碼，呼叫 `reauthenticateWithCredential`，成功後才 `updatePassword`。也可以在主控台的該使用者上重設。前端沒有預期的校驗碼。
 
 ## 種入範例詞組
 
@@ -92,9 +94,19 @@ node scripts/seed-firestore.js --print
 
 `worker/` 是舊草稿，標成 DEPRECATED，不要部署。靜態網站不呼叫它。
 
+## GitHub Pages
+
+線上站只應包含練習頁需要的 HTML、CSS、JS、圖示和拼音 JSON。`firestore.rules`、`firebase.json`、`tests/`、`scripts/`、`worker/` 留在 git（給 `firebase deploy` 和測試），不進 Pages 成品。
+
+`.github/workflows/pages.yml` 在推上 `main` 時執行 `node scripts/export-pages.js`，把允許的檔案複製到 `_site`，再用 GitHub Pages 的 artifact 部署。
+
+倉庫設定只需做一次：Settings → Pages → Build and deployment → Source 選 **GitHub Actions**。在改成 Actions 之前，舊設定（分支 `main`、資料夾 `/`）仍會把整個倉庫，包括 `firestore.rules`，放到網站上。合併後請改來源；若那次推送的部署沒跑成，到 Actions 重跑 Deploy GitHub Pages。
+
+本機預覽仍用靜態伺服器，不經過這份清單。
+
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v2`。改了頁面、腳本或拼音資料後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
+`sw.js` 的 `VERSION` 目前是 `v3`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
 
 ## 測試
 

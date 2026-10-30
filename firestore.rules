@@ -1,23 +1,61 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 練習頁不登入。sets、words、sessions 都可讀。
-    // 練習頁可建立 sessions。sets／words 只有已登入家長能寫。
+    // 練習頁不登入，仍可讀 sets／words，並建立形狀正確的 sessions。
+    // 家長電郵必須與 js/config.js 的 parentEmail 相同。
+    // 練習頁若沿用家長的 Auth 持久登入，建立 sessions 仍只看欄位，不要求未登入。
+    // 匿名者不能讀 sessions。客戶端不能改或刪 sessions。
     // 其餘路徑預設拒絕。
+
+    function isParent() {
+      return request.auth != null
+        && request.auth.token.email == 'parent@pinyin-practice.local';
+    }
+
+    function validSession(docId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(['id', 'startedAt', 'durationMs', 'mode', 'setId', 'total', 'correct'])
+        && data.keys().hasAll(['id', 'startedAt', 'durationMs', 'mode', 'setId', 'total', 'correct'])
+        && data.id is string
+        && data.id == docId
+        && data.id.size() > 0
+        && data.id.size() <= 80
+        && data.id.matches('^[A-Za-z0-9_-]+$')
+        && data.startedAt is string
+        && data.startedAt.size() == 24
+        && data.startedAt.matches('^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$')
+        && data.durationMs is int
+        && data.durationMs >= 0
+        && data.durationMs <= 86400000
+        && data.mode is string
+        && data.mode.matches('^(A|B|C)$')
+        && data.setId is string
+        && data.setId.size() > 0
+        && data.setId.size() <= 80
+        && data.setId.matches('^[A-Za-z0-9_-]+$')
+        && data.total is int
+        && data.total >= 0
+        && data.total <= 500
+        && data.correct is int
+        && data.correct >= 0
+        && data.correct <= 500
+        && data.correct <= data.total;
+    }
 
     match /sets/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create, update, delete: if isParent();
     }
 
     match /words/{id} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create, update, delete: if isParent();
     }
 
     match /sessions/{id} {
-      allow read: if true;
-      allow create: if true;
+      allow read: if isParent();
+      allow create: if validSession(id);
+      allow update, delete: if false;
     }
 
     match /{document=**} {

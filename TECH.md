@@ -1,11 +1,11 @@
 # 架構備忘
 
-靜態站，給 GitHub Pages 從倉庫根目錄直接發佈。沒有打包步驟。Firebase JS 用 compat CDN，由 `js/cloud.js` 在需要時載入，不經打包。
+靜態站。GitHub Pages 不從倉庫根目錄發佈，而由 GitHub Actions（`.github/workflows/pages.yml`）執行 `scripts/export-pages.js`，只上傳練習站檔案。`firestore.rules` 留在倉庫給 `firebase deploy`，不在 Pages 成品裡。Firebase JS 用 compat CDN，由 `js/cloud.js` 在需要時載入，不經打包。
 
 ## 頁面
 
 - `index.html` 練習頁。載入拼音 JSON。模式 A 是點選拼音；B／C 仍只渲染「即將推出」和 `mode_copy`。練習頁不登入。
-- `admin.html` 家長頁。`signInWithEmailAndPassword(APP_CONFIG.parentEmail, 輸入的密碼)`。帳號是 `parent@pinyin-practice.local`。通過後 Firebase Auth 自己記住登入狀態。詞組和字詞的新增、修改、刪除走 `js/cloud.js`。
+- `admin.html` 家長頁。`signInWithEmailAndPassword(APP_CONFIG.parentEmail, 輸入的密碼)`。帳號是 `parent@pinyin-practice.local`。通過後 Firebase Auth 自己記住登入狀態。詞組和字詞的新增、修改、刪除走 `js/cloud.js`。練習紀錄只有這位家長讀得到；未登入不會向 Firestore 列出 `sessions`。更改密碼會先用目前密碼 `reauthenticateWithCredential`，再 `updatePassword`。
 
 ## 資料
 
@@ -35,9 +35,9 @@ Firestore（與本機形狀相同）：
 
 規則見 `firestore.rules`：
 
-- `sets`、`words`、`sessions` 可公開讀。
-- `sessions` 可公開建立，不可更新或刪除。
-- `sets`、`words` 的寫入要 `request.auth != null`。
+- `sets`、`words` 可公開讀。新增、修改、刪除要 `request.auth.token.email == parent@pinyin-practice.local`。
+- `sessions` 只有該家長能讀。任何人可新增，但文件只能有 `id`、`startedAt`、`durationMs`、`mode`、`setId`、`total`、`correct`，型別與範圍寫在規則裡（`mode` 為 A／B／C，`total`／`correct` 為 0–500，`durationMs` 為 0–86400000）。不可更新或刪除。
+- 家長頁列出練習紀錄前，客戶端會先確認目前使用者就是 `parentEmail`。
 - 其餘路徑拒絕。
 
 客戶端判定需要字詞裡的拼音，所以 `words` 必須能被未登入的練習頁讀到。
@@ -48,4 +48,4 @@ Firestore（與本機形狀相同）：
 
 ## 快取
 
-`sw.js` 的 `VERSION` 從 `v2` 起算。導覽先走網路，其餘靜態檔先用快取。換檔後要加大版本號。Firebase SDK 來自 CDN，不進這個快取。
+`sw.js` 的 `VERSION` 目前是 `v3`。導覽先走網路，其餘靜態檔先用快取。換檔後要加大版本號。Firebase SDK 來自 CDN，不進這個快取。
