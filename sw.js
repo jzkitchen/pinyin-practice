@@ -2,7 +2,7 @@
  * 換了頁面、腳本或拼音資料後，把 VERSION 加一（例如 "v1" → "v2"），
  * 已安裝的 App 下次開啟會改用新快取。
  */
-var VERSION = "v1";
+var VERSION = "v2";
 var CACHE = "pinyin-practice-" + VERSION;
 
 var CORE = [
@@ -13,6 +13,7 @@ var CORE = [
   "manifest.webmanifest",
   "data/pinyin_tables_and_seeds_v1.json",
   "js/config.js",
+  "js/firebase-config.js",
   "js/pinyin-tables.js",
   "js/grade.js",
   "js/cloud.js",

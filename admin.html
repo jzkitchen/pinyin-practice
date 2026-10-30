@@ -21,7 +21,9 @@
     <p id="status" class="status" role="status"></p>
     <section id="gate" class="card login-card">
       <h2>請輸入管理密碼</h2>
-      <p class="hint">密碼不會寫進網頁。這個頁面只比對校驗碼。</p>
+      <p class="hint">密碼交給 Firebase 核對，不會寫進這個網頁。</p>
+      <p class="hint">家長帳號：<span id="parent-email"></span></p>
+      <p id="gate-unconfigured" class="hint" hidden>雲端尚未設定，暫時不能進入家長管理。</p>
       <form id="login-form">
         <label for="password">密碼</label>
         <input id="password" type="password" autocomplete="current-password" required>
@@ -36,6 +38,7 @@
     <p>版本 v1 · <a href="index.html">回到練習</a></p>
   </footer>
   <script src="js/config.js"></script>
+  <script src="js/firebase-config.js"></script>
   <script src="js/pinyin-tables.js"></script>
   <script src="js/grade.js"></script>
   <script src="js/cloud.js"></script>

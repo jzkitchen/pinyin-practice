@@ -1,9 +1,7 @@
-/* 家長管理。密碼只在這台瀏覽器裡做 SHA-256 比對，明文不留下。 */
+/* 家長管理。用 Firebase Auth 登入固定家長帳號，密碼不寫進網頁。 */
 (function () {
   "use strict";
 
-  var UNLOCK_KEY = "pinyinAdminUnlocked";
-  var SHA_KEY = "pinyinAdminSha";
   var state = {
     sets: [],
     words: [],
@@ -20,23 +18,6 @@
   function setStatus(message, kind) {
     statusNode.textContent = message || "";
     statusNode.className = kind ? "status " + kind : "status";
-  }
-
-  function hashPassword(password) {
-    var bytes = new TextEncoder().encode(password);
-    return crypto.subtle.digest("SHA-256", bytes).then(function (buffer) {
-      return Array.from(new Uint8Array(buffer)).map(function (byte) {
-        return byte.toString(16).padStart(2, "0");
-      }).join("");
-    });
-  }
-
-  function expectedHash() {
-    return String(APP_CONFIG.adminPasswordSha256 || "").trim().toLowerCase();
-  }
-
-  function unlocked() {
-    return sessionStorage.getItem(UNLOCK_KEY) === "1";
   }
 
   function parseTones(text) {
@@ -69,8 +50,8 @@
   }
 
   function storageLabel() {
-    if (APP_CONFIG.storage === "api") {
-      return APP_CONFIG.apiBase ? "雲端 API" : "雲端 API（尚未填 apiBase）";
+    if (APP_CONFIG.storage === "firebase") {
+      return PinyinCloud.firebaseConfigured() ? "Firebase" : "Firebase（尚未填設定）";
     }
     return "本機";
   }
@@ -79,22 +60,58 @@
     app.replaceChildren();
     var intro = document.createElement("p");
     intro.className = "hint";
-    intro.textContent = "儲存位置：" + storageLabel() + "。練習方式尚未上線，這裡先管理詞組和字詞。";
+    intro.textContent = "儲存位置：" + storageLabel() + "。點選拼音可以練習。認讀選擇和組合拼音尚未開放。";
 
     var logout = document.createElement("button");
     logout.type = "button";
     logout.className = "secondary";
     logout.textContent = "登出";
     logout.addEventListener("click", function () {
-      sessionStorage.removeItem(UNLOCK_KEY);
-      sessionStorage.removeItem(SHA_KEY);
-      gate.hidden = false;
-      app.hidden = true;
-      app.replaceChildren();
-      setStatus("已登出。");
+      PinyinCloud.signOut().then(function () {
+        gate.hidden = false;
+        app.hidden = true;
+        app.replaceChildren();
+        setStatus("已登出。");
+      }).catch(function (err) {
+        setStatus(err.message || "無法登出", "bad");
+      });
     });
 
-    app.append(intro, logout, renderSets(), renderWords(), renderSessions());
+    app.append(intro, logout, renderSets(), renderWords(), renderPassword(), renderSessions());
+  }
+
+  function renderPassword() {
+    var card = document.createElement("section");
+    card.className = "card";
+    var title = document.createElement("h2");
+    title.textContent = "更改密碼";
+    var form = document.createElement("form");
+    var label = document.createElement("label");
+    label.setAttribute("for", "next-password");
+    label.textContent = "新密碼";
+    var input = document.createElement("input");
+    input.id = "next-password";
+    input.type = "password";
+    input.autocomplete = "new-password";
+    input.required = true;
+    var save = document.createElement("button");
+    save.type = "submit";
+    save.textContent = "更改密碼";
+    form.append(label, input, save);
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      PinyinCloud.changePassword(input.value).then(function () {
+        input.value = "";
+        setStatus("已更改密碼。");
+      }).catch(function (err) {
+        setStatus(err.message || "無法更改密碼", "bad");
+      });
+    });
+    var hint = document.createElement("p");
+    hint.className = "hint";
+    hint.textContent = "至少 6 個字元。也可以在 Firebase 主控台的 Authentication 裡重設。";
+    card.append(title, hint, form);
+    return card;
   }
 
   function renderSets() {
@@ -396,7 +413,7 @@
     note.className = "hint";
     note.textContent = state.sessions.length
       ? "共 " + state.sessions.length + " 筆。"
-      : "尚無練習紀錄。模式上線後會寫入這裡。";
+      : "尚無練習紀錄。做完一組點選拼音後會寫在這裡。";
     card.append(title, note);
     state.sessions.forEach(function (session) {
       var row = document.createElement("p");
@@ -443,38 +460,54 @@
   document.getElementById("login-form").addEventListener("submit", function (event) {
     event.preventDefault();
     var password = document.getElementById("password").value;
+    if (!PinyinCloud.firebaseConfigured()) {
+      setStatus("雲端尚未設定，暫時不能進入家長管理。", "bad");
+      return;
+    }
     if (!password) {
       setStatus("請輸入密碼。", "bad");
       return;
     }
-    if (!crypto.subtle) {
-      setStatus("這個環境無法計算校驗碼。請用 HTTPS 或 localhost 開啟。", "bad");
-      return;
-    }
     setStatus("核對中…");
-    hashPassword(password).then(function (hex) {
+    PinyinCloud.signIn(APP_CONFIG.parentEmail, password).then(function () {
       document.getElementById("password").value = "";
-      if (hex !== expectedHash()) {
-        setStatus("密碼不正確。", "bad");
-        return;
-      }
-      sessionStorage.setItem(UNLOCK_KEY, "1");
-      sessionStorage.setItem(SHA_KEY, hex);
       showApp();
-    }).catch(function () {
-      setStatus("無法計算校驗碼。", "bad");
+    }).catch(function (err) {
+      setStatus(err.message || "無法登入。", "bad");
     });
   });
 
+  function showUnconfigured() {
+    var form = document.getElementById("login-form");
+    var note = document.getElementById("gate-unconfigured");
+    if (form) form.hidden = true;
+    if (note) note.hidden = false;
+    setStatus("雲端尚未設定，暫時不能進入家長管理。");
+  }
+
   function boot() {
+    var emailNode = document.getElementById("parent-email");
+    if (emailNode) emailNode.textContent = APP_CONFIG.parentEmail || "";
+    try {
+      sessionStorage.removeItem("pinyinAdminUnlocked");
+      sessionStorage.removeItem("pinyinAdminSha");
+    } catch (err) { /* ignore */ }
     PinyinTables.load(APP_CONFIG.dataUrl).then(function (data) {
       PinyinGrade.init(data);
       PinyinCloud.init(APP_CONFIG, { tables: data });
-      return PinyinCloud.seedIfEmpty();
-    }).then(function () {
+      if (!PinyinCloud.firebaseConfigured()) {
+        showUnconfigured();
+        return null;
+      }
+      return PinyinCloud.connect({ auth: true });
+    }).then(function (connected) {
+      if (!PinyinCloud.firebaseConfigured()) return null;
       var button = document.getElementById("login-button");
       if (button) button.disabled = false;
-      if (unlocked()) showApp();
+      if (!connected) return null;
+      return PinyinCloud.currentUser();
+    }).then(function (user) {
+      if (user) showApp();
     }).catch(function (err) {
       setStatus(err.message || "載入失敗", "bad");
     });

@@ -6,15 +6,13 @@
 
 ## 現在有什麼
 
-- 練習頁 `index.html`：選詞組、選模式，並列出字詞。
-  - A 點選拼音
-  - B 認讀選擇（看拼音或聽讀音後選字，不是自由打字）
-  - C 組合拼音
-  - 三種玩法都還是「即將推出」。
-- 家長頁 `admin.html`：輸入密碼後，可以新增、修改、刪除詞組和字詞。
-- 預設把資料放在這台裝置。Worker 還沒部署，Pages 一樣開得了。
+- 練習頁 `index.html`：選詞組，再選練習方式。
+  - A 點選拼音：看字詞，依每個字點聲母、韻母、聲調。答錯立刻看到帶調拼音，做完選定的詞組就結束。
+  - B 認讀選擇、C 組合拼音：仍是「即將推出」。
+- 家長頁 `admin.html`：用 Firebase 家長帳號登入後，可以新增、修改、刪除詞組和字詞。
+- 練習頁不登入。字詞讀取和練習紀錄的新增都不需要家長密碼。
 
-請用靜態伺服器或 GitHub Pages 開啟，不要直接點開檔案。瀏覽器會擋住讀取 JSON，密碼校驗也需要 HTTPS 或 localhost。
+請用靜態伺服器或 GitHub Pages 開啟，不要直接點開檔案。瀏覽器會擋住讀取 JSON，Firebase 也需要 HTTPS 或 localhost。
 
 ```bash
 python3 -m http.server 8080
@@ -28,66 +26,81 @@ python3 -m http.server 8080
 
 `data/pinyin_tables_and_seeds_v1.json`
 
-這是 2026-10-30 的專家交付 v1。`js/pinyin-tables.js` 只負責載入，不另抄一份表。第一次在本機模式開啟時，種子詞會放進名為「範例」的詞組。
+這是 2026-10-30 的專家交付 v1。`js/pinyin-tables.js` 只負責載入，不另抄一份表。
 
-判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、j／q／x 後面的 u 與 ü 相同。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。不拿詞典裡的其他讀音湊對。
+判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、j／q／x 後面的 u 與 ü 相同。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。模式 A 把點選結果送進同一個 `PinyinGrade`，不另寫一套判定。
 
-## 本機與雲端
+## Firebase
 
-`js/config.js` 的 `storage`：
+`js/config.js` 的 `storage` 預設是 `"firebase"`。公開的 client 設定在 `js/firebase-config.js`（不是密鑰）：
 
-- `local`（預設）：詞組、字詞、練習紀錄存在這台裝置的 localStorage。
-- `api`：向 `apiBase` 呼叫 Cloudflare Worker。`apiBase` 不要加結尾斜線。
+- 專案 `pinyin-practice-eabd1`
+- Firestore 區域 asia-east1
+- Auth 已開啟 Email／Password
 
-## 更換管理密碼
+家長帳號固定為 `parent@pinyin-practice.local`（`APP_CONFIG.parentEmail`）。家長頁只讓人輸入密碼，再呼叫 `signInWithEmailAndPassword`。練習頁不載入 Auth，維持未登入。
 
-倉庫裡只有 SHA-256 校驗碼，沒有密碼。校驗碼寫在 `js/config.js` 的 `adminPasswordSha256`。
+集合跟字詞形狀：
 
-終端機請用 UTF-8。這段從標準輸入讀密碼，不會把密碼留在命令列參數裡：
+| 集合 | 誰可以讀 | 誰可以寫 |
+| --- | --- | --- |
+| `sets` | 所有人 | 已登入家長 |
+| `words` | 所有人 | 已登入家長 |
+| `sessions` | 所有人 | 所有人可新增；不可改、不可刪 |
+
+規則在 `firestore.rules`。其他路徑預設拒絕。部署：
 
 ```bash
-read -rs PW
-printf '%s' "$PW" | node -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const {createHash}=require("crypto");process.stdout.write(createHash("sha256").update(d,"utf8").digest("hex")+"\n")})'
-unset PW
+npx firebase-tools deploy --only firestore:rules --project pinyin-practice-eabd1
 ```
 
-把印出的 64 位十六進位貼上，取代 `adminPasswordSha256` 的舊值。不要把密碼寫進檔案，也不要提交。
+`firebase.json` 已指向這份規則。需要先 `npx firebase-tools login`。
 
-登入時，瀏覽器用 Web Crypto 對剛輸入的密碼做 SHA-256，再和上面的校驗碼比較。成功後只在這個分頁的 sessionStorage 記下已解鎖，關掉分頁就要再輸入。
+在規則部署、範例詞組寫入之前，練習頁若讀不到雲端詞組，會改用內建範例，讓點選拼音仍可練習。雲端有詞組之後，練習頁改讀 Firestore。
 
-這個校驗碼現在放在前端，只能擋隨手打開。Worker 上線後，寫入會再跟環境變數比一次。兩邊用同一個校驗碼。仍然不要把密碼放進版本庫。
+離線開發可把 `js/config.js` 的 `storage` 改成 `"local"`，資料只留在這台裝置。測試也用這個覆寫。不要把家長密碼寫進版本庫。
 
-## 部署 Cloudflare Worker
+## 家長帳號與密碼
 
-Pages 不執行 `worker/`。要改走雲端時：
+1. Firebase 主控台 → Authentication → Sign-in method → 啟用 Email／Password。
+2. Users → Add user。電郵用 `parent@pinyin-practice.local`，密碼自己訂，不要提交到 git。
+3. 開啟 `admin.html`，輸入該密碼。
 
-1. 用 `npx wrangler`（不必為這個靜態站加套件或建置）。
-2. `npx wrangler d1 create pinyin-practice`
-3. 把 `worker/wrangler.toml.example` 複製成 `worker/wrangler.toml`，填上 `database_id`。正式的 toml 不會被提交。
-4. 在 `worker/` 目錄執行：`npx wrangler d1 execute pinyin-practice --remote --file=schema.sql`
-5. `npx wrangler secret put ADMIN_PASSWORD_SHA256`，貼上與 `js/config.js` 相同的校驗碼。
-6. `npx wrangler deploy`
-7. 把 `js/config.js` 的 `storage` 改成 `"api"`，`apiBase` 改成 Worker 的網址。
+更改密碼：登入家長頁後用「更改密碼」，或在主控台的該使用者上重設。前端沒有預期的校驗碼。
 
-資料表在 `worker/schema.sql`：`sets`、`words`、`sessions`。
+## 種入範例詞組
 
-| 方法 | 路徑 | 誰可以呼叫 |
-| --- | --- | --- |
-| GET | `/api/sets`、`/api/words?setId=`、`/api/sessions`、`/api/health` | 練習頁 |
-| POST | `/api/sessions` | 練習頁（尚無登入） |
-| POST、PATCH、DELETE | `/api/sets`、`/api/words` | 家長。標頭 `X-Admin-Password-Sha256` 要等於環境變數 |
-| POST | `/api/seed` | 家長。用來載入範例詞組 |
+40 個種子詞經 `PinyinGrade.mapSeedWord` 拆成 `readings`，放進名為「範例」的詞組（id `set_demo`）。
 
-`api` 模式不會在練習頁自動寫入。請到家長頁按「載入範例詞組」，或自己建詞組。
+登入家長頁，按「載入範例詞組」。已有同一 id 就不會覆寫。
+
+或在終端機執行（密碼只放環境變數）：
+
+```bash
+PINYIN_PARENT_PASSWORD='你的密碼' node scripts/seed-firestore.js
+```
+
+只列印將寫入的文件、不連線：
+
+```bash
+node scripts/seed-firestore.js --print
+```
+
+規則尚未部署時，寫入會被拒絕。
+
+## 已停用的 Worker
+
+`worker/` 是舊草稿，標成 DEPRECATED，不要部署。靜態網站不呼叫它。
 
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v1`。改了頁面、腳本或拼音資料後，請把版本加一（例如 `v2`），已經安裝的 App 下次開啟才會換掉舊快取。
+`sw.js` 的 `VERSION` 目前是 `v2`。改了頁面、腳本或拼音資料後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
 
 ## 測試
 
 ```bash
 node tests/grade.test.js
 node tests/cloud.test.js
+node tests/mode-a.test.js
 node tests/static.test.js
 ```

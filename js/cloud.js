@@ -1,6 +1,7 @@
 /* 詞組、字詞、練習紀錄。
- * local：localStorage。api：REST（見 worker/）。
- * 兩種後端都用同一份資料形狀。
+ * local：localStorage，給測試和離線開發。
+ * firebase：Firestore 集合 sets、words、sessions。練習頁不登入。
+ * 家長寫入靠 Firebase Auth，前端不存放預期密碼。
  */
 (function (root, factory) {
   var api = factory();
@@ -10,11 +11,16 @@
   "use strict";
 
   var STORAGE_KEY = "pinyin-practice.v1";
+  var SDK = "https://www.gstatic.com/firebasejs/10.14.1/";
   var ctx = {
     config: null,
     grade: null,
     tables: null,
-    storage: null
+    storage: null,
+    db: null,
+    auth: null,
+    firebaseConfig: null,
+    firebaseReady: false
   };
 
   function init(config, extras) {
@@ -23,6 +29,10 @@
     ctx.grade = extras.grade || rootGrade();
     ctx.tables = extras.tables || null;
     ctx.storage = extras.storage || rootStorage();
+    ctx.db = extras.firestore || null;
+    ctx.auth = extras.auth || null;
+    ctx.firebaseConfig = extras.firebaseConfig || null;
+    ctx.firebaseReady = !!extras.firestore;
     return api;
   }
 
@@ -77,39 +87,163 @@
     }
   }
 
-  function isApi() {
-    return ctx.config && ctx.config.storage === "api";
+  function isFirebase() {
+    return ctx.config && ctx.config.storage === "firebase";
   }
 
-  function adminSha() {
-    try {
-      return sessionStorage.getItem("pinyinAdminSha") || "";
-    } catch (err) {
-      return "";
-    }
+  function readFirebaseConfig() {
+    if (ctx.firebaseConfig) return ctx.firebaseConfig;
+    if (typeof FIREBASE_CONFIG !== "undefined") return FIREBASE_CONFIG;
+    return null;
   }
 
-  function apiJSON(method, path, body, auth) {
-    var base = String(ctx.config.apiBase || "").replace(/\/$/, "");
-    if (!base) return Promise.reject(new Error("尚未設定 apiBase"));
-    var headers = { "Accept": "application/json" };
-    if (body != null) headers["Content-Type"] = "application/json";
-    if (auth) {
-      var sha = adminSha();
-      if (sha) headers["X-Admin-Password-Sha256"] = sha;
+  function liveConfig(cfg) {
+    if (!cfg) return false;
+    var projectId = String(cfg.projectId || "").trim();
+    var apiKey = String(cfg.apiKey || "").trim();
+    if (!projectId || !apiKey) return false;
+    if (projectId === "TODO" || apiKey === "TODO") return false;
+    if (projectId.indexOf("TODO") === 0 || apiKey.indexOf("TODO") === 0) return false;
+    return true;
+  }
+
+  function firebaseConfigured() {
+    if (ctx.firebaseReady && ctx.db) return true;
+    return liveConfig(readFirebaseConfig());
+  }
+
+  function bundledDemo() {
+    return isFirebase() && !firebaseConfigured();
+  }
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var existing = document.querySelector('script[src="' + src + '"]');
+      if (existing && existing.getAttribute("data-loaded") === "1") return resolve();
+      if (existing) {
+        existing.addEventListener("load", function () { resolve(); });
+        existing.addEventListener("error", function () { reject(new Error("無法載入雲端")); });
+        return;
+      }
+      var script = document.createElement("script");
+      script.src = src;
+      script.async = false;
+      script.onload = function () {
+        script.setAttribute("data-loaded", "1");
+        resolve();
+      };
+      script.onerror = function () { reject(new Error("無法載入雲端")); };
+      document.head.appendChild(script);
+    });
+  }
+
+  function connect(options) {
+    options = options || {};
+    if (!isFirebase()) return Promise.resolve(false);
+    if (ctx.db && (!options.auth || ctx.auth)) return Promise.resolve(true);
+    if (!firebaseConfigured()) return Promise.resolve(false);
+    if (typeof document === "undefined") return Promise.reject(new Error("雲端尚未設定"));
+    var chain = loadScript(SDK + "firebase-app-compat.js")
+      .then(function () { return loadScript(SDK + "firebase-firestore-compat.js"); });
+    if (options.auth) {
+      chain = chain.then(function () { return loadScript(SDK + "firebase-auth-compat.js"); });
     }
-    return fetch(base + path, {
-      method: method,
-      headers: headers,
-      body: body != null ? JSON.stringify(body) : undefined
-    }).then(function (res) {
-      return res.text().then(function (text) {
-        var payload = text ? JSON.parse(text) : null;
-        if (!res.ok) {
-          var msg = payload && payload.error ? payload.error : "無法連線到伺服器";
-          throw new Error(msg);
-        }
-        return payload;
+    return chain.then(function () {
+      var cfg = readFirebaseConfig();
+      if (typeof firebase === "undefined") throw new Error("無法載入雲端");
+      if (!firebase.apps.length) firebase.initializeApp(cfg);
+      ctx.db = firebase.firestore();
+      if (options.auth) ctx.auth = firebase.auth();
+      ctx.firebaseReady = true;
+      return true;
+    });
+  }
+
+  function needCloud() {
+    if (!isFirebase() || !firebaseConfigured()) return Promise.reject(new Error("雲端尚未設定"));
+    return connect().then(function () {
+      if (!ctx.db) throw new Error("雲端尚未設定");
+    });
+  }
+
+  function asCloud(promise) {
+    return Promise.resolve(promise).catch(function (err) {
+      var code = err && err.code;
+      if (code === "permission-denied" || code === "unauthenticated") {
+        var denied = new Error("雲端拒絕存取。請確認已部署 Firestore 規則，而且家長已登入。");
+        denied.code = code;
+        throw denied;
+      }
+      throw err;
+    });
+  }
+
+  function fromDoc(doc) {
+    var data = (doc && doc.data && doc.data()) || {};
+    var copy = Object.assign({}, data);
+    copy.id = doc.id;
+    return copy;
+  }
+
+  function authMessage(err) {
+    var code = err && err.code;
+    if (code === "auth/wrong-password" || code === "auth/invalid-credential" || code === "auth/user-not-found" || code === "auth/invalid-login-credentials") {
+      return "電郵或密碼不正確。";
+    }
+    if (code === "auth/invalid-email") return "請輸入有效的電郵。";
+    if (code === "auth/too-many-requests") return "嘗試太多次，請稍後再來。";
+    if (code === "auth/network-request-failed") return "無法連線到雲端。";
+    if (code === "auth/weak-password") return "密碼至少 6 個字元。";
+    if (code === "auth/requires-recent-login") return "請先登出再登入，然後更改密碼。";
+    return (err && err.message) || "無法登入。";
+  }
+
+  function signIn(email, password) {
+    email = String(email || "").trim();
+    if (!email || !password) return Promise.reject(new Error("請輸入電郵和密碼"));
+    if (!isFirebase() || !firebaseConfigured()) return Promise.reject(new Error("雲端尚未設定"));
+    return connect({ auth: true }).then(function () {
+      if (!ctx.auth || typeof ctx.auth.signInWithEmailAndPassword !== "function") {
+        return Promise.reject(new Error("雲端尚未設定"));
+      }
+      return ctx.auth.signInWithEmailAndPassword(email, password).then(function (cred) {
+        var user = cred && cred.user ? cred.user : {};
+        return { email: user.email || email, uid: user.uid || "" };
+      }).catch(function (err) {
+        var mapped = new Error(authMessage(err));
+        mapped.code = err && err.code;
+        throw mapped;
+      });
+    });
+  }
+
+  function signOut() {
+    if (ctx.auth && typeof ctx.auth.signOut === "function") return ctx.auth.signOut();
+    return Promise.resolve();
+  }
+
+  function currentUser() {
+    if (!ctx.auth) return Promise.resolve(null);
+    if (ctx.auth.currentUser) return Promise.resolve(ctx.auth.currentUser);
+    if (typeof ctx.auth.onAuthStateChanged !== "function") return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      var unsub = ctx.auth.onAuthStateChanged(function (user) {
+        if (typeof unsub === "function") unsub();
+        resolve(user || null);
+      });
+    });
+  }
+
+  function changePassword(nextPassword) {
+    var next = String(nextPassword || "");
+    if (next.length < 6) return Promise.reject(new Error("密碼至少 6 個字元"));
+    return connect({ auth: true }).then(function () {
+      var user = ctx.auth && ctx.auth.currentUser;
+      if (!user || typeof user.updatePassword !== "function") return Promise.reject(new Error("請先登入"));
+      return user.updatePassword(next).catch(function (err) {
+        var mapped = new Error(authMessage(err));
+        mapped.code = err && err.code;
+        throw mapped;
       });
     });
   }
@@ -140,47 +274,95 @@
     return { set: set, words: words };
   }
 
+  function demoCatalog() {
+    var bundle = demoBundle();
+    return { set: clone(bundle.set), words: clone(bundle.words) };
+  }
+
   function sortByTime(list) {
     return list.slice().sort(function (a, b) {
       return String(a.createdAt).localeCompare(String(b.createdAt));
     });
   }
 
+  function sortSessions(list) {
+    return list.slice().sort(function (a, b) {
+      return String(b.startedAt).localeCompare(String(a.startedAt));
+    });
+  }
+
   function listSets() {
-    if (isApi()) return apiJSON("GET", "/api/sets");
-    return Promise.resolve(sortByTime(readDb().sets));
+    if (!isFirebase()) return Promise.resolve(sortByTime(readDb().sets));
+    if (!firebaseConfigured()) return Promise.resolve(sortByTime([demoBundle().set]));
+    return asCloud(needCloud().then(function () {
+      return ctx.db.collection("sets").get();
+    }).then(function (snap) {
+      return sortByTime((snap.docs || []).map(fromDoc));
+    }));
   }
 
   function listWords(setId) {
-    if (isApi()) return apiJSON("GET", "/api/words?setId=" + encodeURIComponent(setId));
-    var words = readDb().words.filter(function (word) { return word.setId === setId; });
-    return Promise.resolve(sortByTime(words));
+    if (!isFirebase()) {
+      var words = readDb().words.filter(function (word) { return word.setId === setId; });
+      return Promise.resolve(sortByTime(words));
+    }
+    if (!firebaseConfigured()) {
+      var bundle = demoBundle();
+      if (setId !== bundle.set.id) return Promise.resolve([]);
+      return Promise.resolve(bundle.words.slice());
+    }
+    return asCloud(needCloud().then(function () {
+      return ctx.db.collection("words").where("setId", "==", setId).get();
+    }).then(function (snap) {
+      return sortByTime((snap.docs || []).map(fromDoc));
+    }));
   }
 
   function listSessions() {
-    if (isApi()) return apiJSON("GET", "/api/sessions");
-    var sessions = readDb().sessions.slice().sort(function (a, b) {
-      return String(b.startedAt).localeCompare(String(a.startedAt));
-    });
-    return Promise.resolve(sessions);
+    if (!isFirebase()) {
+      return Promise.resolve(sortSessions(readDb().sessions));
+    }
+    if (!firebaseConfigured()) return Promise.resolve([]);
+    return asCloud(needCloud().then(function () {
+      return ctx.db.collection("sessions").get();
+    }).then(function (snap) {
+      return sortSessions((snap.docs || []).map(fromDoc));
+    }));
   }
 
   function createSet(name) {
     var trimmed = String(name || "").trim();
     if (!trimmed) return Promise.reject(new Error("請填詞組名稱"));
-    if (isApi()) return apiJSON("POST", "/api/sets", { name: trimmed }, true);
+    if (isFirebase()) {
+      return asCloud(needCloud().then(function () {
+        var at = nowIso();
+        var set = { id: uid("set"), name: trimmed, createdAt: at, updatedAt: at };
+        return ctx.db.collection("sets").doc(set.id).set(set).then(function () {
+          return clone(set);
+        });
+      }));
+    }
     var db = readDb();
-    var at = nowIso();
-    var set = { id: uid("set"), name: trimmed, createdAt: at, updatedAt: at };
-    db.sets.push(set);
+    var atLocal = nowIso();
+    var localSet = { id: uid("set"), name: trimmed, createdAt: atLocal, updatedAt: atLocal };
+    db.sets.push(localSet);
     writeDb(db);
-    return Promise.resolve(clone(set));
+    return Promise.resolve(clone(localSet));
   }
 
   function updateSet(id, patch) {
     var trimmed = String(patch && patch.name || "").trim();
     if (!trimmed) return Promise.reject(new Error("請填詞組名稱"));
-    if (isApi()) return apiJSON("PATCH", "/api/sets/" + encodeURIComponent(id), { name: trimmed }, true);
+    if (isFirebase()) {
+      return asCloud(needCloud().then(function () {
+        return ctx.db.collection("sets").doc(id).get();
+      }).then(function (snap) {
+        if (!snap.exists) throw new Error("找不到詞組");
+        var prev = fromDoc(snap);
+        var next = { id: id, name: trimmed, createdAt: prev.createdAt, updatedAt: nowIso() };
+        return ctx.db.collection("sets").doc(id).set(next).then(function () { return clone(next); });
+      }));
+    }
     var db = readDb();
     var set = db.sets.find(function (item) { return item.id === id; });
     if (!set) return Promise.reject(new Error("找不到詞組"));
@@ -191,7 +373,20 @@
   }
 
   function deleteSet(id) {
-    if (isApi()) return apiJSON("DELETE", "/api/sets/" + encodeURIComponent(id), null, true);
+    if (isFirebase()) {
+      return asCloud(needCloud().then(function () {
+        return ctx.db.collection("words").where("setId", "==", id).get();
+      }).then(function (snap) {
+        var docs = snap.docs || [];
+        return docs.reduce(function (chain, doc) {
+          return chain.then(function () {
+            return ctx.db.collection("words").doc(doc.id).delete();
+          });
+        }, Promise.resolve());
+      }).then(function () {
+        return ctx.db.collection("sets").doc(id).delete();
+      }).then(function () { return { ok: true }; }));
+    }
     var db = readDb();
     db.sets = db.sets.filter(function (item) { return item.id !== id; });
     db.words = db.words.filter(function (item) { return item.setId !== id; });
@@ -232,7 +427,14 @@
     var word;
     try { word = normalizeWord(input, null); }
     catch (err) { return Promise.reject(err); }
-    if (isApi()) return apiJSON("POST", "/api/words", word, true);
+    if (isFirebase()) {
+      return asCloud(needCloud().then(function () {
+        return ctx.db.collection("sets").doc(word.setId).get();
+      }).then(function (snap) {
+        if (!snap.exists) throw new Error("找不到詞組");
+        return ctx.db.collection("words").doc(word.id).set(word);
+      }).then(function () { return clone(word); }));
+    }
     var db = readDb();
     if (!db.sets.some(function (set) { return set.id === word.setId; })) {
       return Promise.reject(new Error("找不到詞組"));
@@ -243,11 +445,13 @@
   }
 
   function updateWord(id, input) {
-    if (isApi()) {
+    if (isFirebase()) {
       var word;
       try { word = normalizeWord(Object.assign({}, input, { id: id }), { id: id, createdAt: input.createdAt }); }
       catch (err) { return Promise.reject(err); }
-      return apiJSON("PATCH", "/api/words/" + encodeURIComponent(id), word, true);
+      return asCloud(needCloud().then(function () {
+        return ctx.db.collection("words").doc(id).set(word);
+      }).then(function () { return clone(word); }));
     }
     var db = readDb();
     var index = db.words.findIndex(function (item) { return item.id === id; });
@@ -261,7 +465,11 @@
   }
 
   function deleteWord(id) {
-    if (isApi()) return apiJSON("DELETE", "/api/words/" + encodeURIComponent(id), null, true);
+    if (isFirebase()) {
+      return asCloud(needCloud().then(function () {
+        return ctx.db.collection("words").doc(id).delete();
+      }).then(function () { return { ok: true }; }));
+    }
     var db = readDb();
     db.words = db.words.filter(function (item) { return item.id !== id; });
     writeDb(db);
@@ -279,7 +487,12 @@
       correct: Number(input.correct) || 0
     };
     if (!session.mode || !session.setId) return Promise.reject(new Error("練習紀錄不完整"));
-    if (isApi()) return apiJSON("POST", "/api/sessions", session, false);
+    if (isFirebase()) {
+      if (!firebaseConfigured()) return Promise.resolve(clone(session));
+      return asCloud(needCloud().then(function () {
+        return ctx.db.collection("sessions").doc(session.id).set(session);
+      }).then(function () { return clone(session); }));
+    }
     var db = readDb();
     db.sessions.push(session);
     writeDb(db);
@@ -287,7 +500,10 @@
   }
 
   function seedIfEmpty() {
-    if (isApi()) return listSets();
+    if (isFirebase()) {
+      if (!firebaseConfigured()) return Promise.resolve(sortByTime([demoBundle().set]));
+      return listSets();
+    }
     var db = readDb();
     if (db.seeded) return Promise.resolve(sortByTime(db.sets));
     var bundle = demoBundle();
@@ -300,7 +516,20 @@
 
   function importDemoSet() {
     var bundle = demoBundle();
-    if (isApi()) return apiJSON("POST", "/api/seed", bundle, true);
+    if (isFirebase()) {
+      return asCloud(needCloud().then(function () {
+        return ctx.db.collection("sets").doc(bundle.set.id).get();
+      }).then(function (snap) {
+        if (snap && snap.exists) return { created: false };
+        return ctx.db.collection("sets").doc(bundle.set.id).set(bundle.set).then(function () {
+          return bundle.words.reduce(function (chain, word) {
+            return chain.then(function () {
+              return ctx.db.collection("words").doc(word.id).set(word);
+            });
+          }, Promise.resolve());
+        }).then(function () { return { created: true }; });
+      }));
+    }
     var db = readDb();
     if (db.sets.some(function (set) { return set.id === bundle.set.id; })) {
       return Promise.resolve({ created: false });
@@ -314,6 +543,14 @@
 
   var api = {
     init: init,
+    connect: connect,
+    firebaseConfigured: firebaseConfigured,
+    bundledDemo: bundledDemo,
+    demoCatalog: demoCatalog,
+    signIn: signIn,
+    signOut: signOut,
+    currentUser: currentUser,
+    changePassword: changePassword,
     listSets: listSets,
     listWords: listWords,
     listSessions: listSessions,
