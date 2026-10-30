@@ -107,7 +107,7 @@ node scripts/seed-firestore.js --print
 
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v4`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
+`sw.js` 的 `VERSION` 目前是 `v5`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
 
 ## 聽讀（模式 C）
 

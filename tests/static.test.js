@@ -198,8 +198,13 @@ function walk(dir) {
 }
 walk(root);
 
-assert.ok(read("sw.js").indexOf('var VERSION = "v4"') > 0);
-assert.ok(read("README.md").indexOf("`v4`") > 0);
+assert.ok(read("sw.js").indexOf('var VERSION = "v5"') > 0);
+assert.ok(read("README.md").indexOf("`v5`") > 0);
+assert.ok(read("TECH.md").indexOf("`v5`") > 0);
+assert.ok(read("js/admin.js").indexOf("點選拼音（模式 A）與組合拼音（模式 C）已可練習") > 0);
+assert.ok(read("js/admin.js").indexOf("認讀選擇（模式 B）尚未開放") > 0);
+assert.ok(read("js/admin.js").indexOf("認讀選擇和組合拼音尚未開放") < 0);
+assert.ok(read("js/admin.js").indexOf("組合拼音尚未開放") < 0);
 var manifest = JSON.parse(read("manifest.webmanifest"));
 assert.strictEqual(manifest.name, "普通話拼音練習");
 assert.strictEqual(manifest.lang, "zh-Hant");
