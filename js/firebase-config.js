@@ -3,7 +3,7 @@
  * 專案 pinyin-practice-eabd1，Firestore 在 asia-east1。
  */
 var FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDJiADxpTPBTZlIYMBmIzEM90D6m0EIHjc",
+  apiKey: "AIzaSyCxM-fHtNJVd6TCQibWeQZZ-owEQySJdJs",
   authDomain: "pinyin-practice-eabd1.firebaseapp.com",
   projectId: "pinyin-practice-eabd1",
   storageBucket: "pinyin-practice-eabd1.firebasestorage.app",
