@@ -2,8 +2,10 @@
 
 var assert = require("assert");
 var fs = require("fs");
+var os = require("os");
 var path = require("path");
 var crypto = require("crypto");
+var execFileSync = require("child_process").execFileSync;
 
 var root = path.join(__dirname, "..");
 
@@ -70,17 +72,106 @@ assert.ok(/^AIza[0-9A-Za-z_-]+$/.test(firebaseConfig.apiKey), "apiKey 格式");
 });
 assert.ok(read("js/firebase-config.js").indexOf("TODO") < 0);
 var rules = read("firestore.rules");
+var parentEmail = require(path.join(root, "js/config.js")).parentEmail;
+assert.strictEqual(parentEmail, "parent@pinyin-practice.local");
 assert.ok(rules.indexOf("request.auth") > 0);
-assert.ok(/match\s+\/sets\/\{id\}/.test(rules));
-assert.ok(/match\s+\/words\/\{id\}/.test(rules));
-assert.ok(/match\s+\/sessions\/\{id\}/.test(rules));
-assert.ok(rules.indexOf("allow read: if true") > 0);
-assert.ok(rules.indexOf("allow write: if request.auth != null") > 0);
-assert.ok(/match\s+\/sessions\/\{id\}[\s\S]*?allow read:\s*if true/.test(rules));
-assert.ok(/match\s+\/sessions\/\{id\}[\s\S]*?allow create:\s*if true/.test(rules));
-var sessionRules = rules.split("match /sessions/{id}")[1].split("match /")[0];
-assert.ok(sessionRules.indexOf("update") < 0, "sessions 不開放 update");
-assert.ok(sessionRules.indexOf("delete") < 0, "sessions 不開放 delete");
+assert.ok(rules.indexOf("request.auth.token.email") > 0);
+assert.ok(rules.indexOf(parentEmail) > 0);
+assert.ok(/function isParent\(\)/.test(rules));
+assert.ok(/function validSession\(docId\)/.test(rules));
+assert.ok(rules.indexOf("allow write: if request.auth != null") < 0, "不能只靠已登入就寫入");
+
+function rulesBlock(collection) {
+  var marker = "match /" + collection + "/{id}";
+  var start = rules.indexOf(marker);
+  assert.ok(start >= 0, marker);
+  var open = rules.indexOf("{", start + marker.length);
+  var depth = 0;
+  for (var i = open; i < rules.length; i++) {
+    if (rules[i] === "{") depth++;
+    else if (rules[i] === "}") {
+      depth--;
+      if (depth === 0) return rules.slice(open + 1, i);
+    }
+  }
+  throw new Error("未閉合的 " + marker);
+}
+
+["sets", "words"].forEach(function (collection) {
+  var block = rulesBlock(collection);
+  assert.ok(/allow read:\s*if true;/.test(block), collection + " 仍可公開讀");
+  assert.ok(/allow create, update, delete:\s*if isParent\(\);/.test(block), collection + " 寫入只限家長");
+  assert.ok(!/request\.auth\s*!=\s*null\s*;/.test(block), collection);
+});
+
+var sessions = rulesBlock("sessions");
+assert.ok(/allow read:\s*if isParent\(\);/.test(sessions), "sessions 只有家長能讀");
+assert.ok(!/allow read:\s*if true/.test(sessions), "匿名者不能讀 sessions");
+assert.ok(/allow create:\s*if validSession\(id\);/.test(sessions));
+assert.ok(!/request\.auth\s*==\s*null/.test(sessions), "已登入家長在練習頁仍可建立紀錄");
+assert.ok(/allow update, delete:\s*if false;/.test(sessions));
+["id", "startedAt", "durationMs", "mode", "setId", "total", "correct"].forEach(function (key) {
+  assert.ok(rules.indexOf("'" + key + "'") > 0, key);
+});
+assert.ok(rules.indexOf("hasOnly") > 0);
+assert.ok(rules.indexOf("hasAll") > 0);
+assert.ok(rules.indexOf("86400000") > 0);
+assert.ok(rules.indexOf("<= 500") > 0);
+assert.ok(/mode\.matches\('(\^\(A\|B\|C\)\$|\^\[ABC\]\$)'\)/.test(rules));
+assert.ok(rules.indexOf("startedAt.size() == 24") > 0);
+assert.ok(rules.indexOf("data.correct <= data.total") > 0);
+assert.ok(rules.indexOf("is int") > 0);
+
+var ignore = read(".gitignore").split(/\r?\n/);
+[".env", ".env.*", "*firebase-adminsdk*.json", "*-service-account*.json", ".runtimeconfig.json"].forEach(function (line) {
+  assert.ok(ignore.indexOf(line) >= 0, "gitignore 缺少 " + line);
+});
+
+var workflow = read(".github/workflows/pages.yml");
+assert.ok(workflow.indexOf("node scripts/export-pages.js") > 0);
+assert.ok(workflow.indexOf("actions/upload-pages-artifact@") > 0);
+assert.ok(workflow.indexOf("actions/deploy-pages@") > 0);
+assert.ok(workflow.indexOf("pages: write") > 0);
+
+var site = fs.mkdtempSync(path.join(os.tmpdir(), "pinyin-pages-"));
+execFileSync(process.execPath, ["scripts/export-pages.js", site], { cwd: root });
+[
+  "index.html",
+  "admin.html",
+  "styles.css",
+  "manifest.webmanifest",
+  "sw.js",
+  ".nojekyll",
+  "data/pinyin_tables_and_seeds_v1.json",
+  "js/config.js",
+  "js/firebase-config.js",
+  "js/cloud.js",
+  "js/app.js",
+  "js/admin.js",
+  "js/grade.js",
+  "js/pinyin-tables.js",
+  "js/modes/a.js",
+  "js/modes/b.js",
+  "js/modes/c.js",
+  "icons/icon-192.png",
+  "icons/icon-512.png",
+  "icons/apple-touch-icon.png"
+].forEach(function (rel) {
+  assert.ok(fs.existsSync(path.join(site, rel)), "Pages 成品缺少 " + rel);
+});
+["firestore.rules", "firebase.json", "README.md", "TECH.md"].forEach(function (rel) {
+  assert.ok(!fs.existsSync(path.join(site, rel)), "Pages 不應包含 " + rel);
+});
+["tests", "scripts", "worker", ".github"].forEach(function (rel) {
+  assert.ok(!fs.existsSync(path.join(site, rel)), "Pages 不應包含 " + rel);
+});
+assert.ok(read("README.md").indexOf("GitHub Actions") > 0);
+assert.ok(read("README.md").indexOf("根目錄發佈") < 0);
+assert.ok(read("TECH.md").indexOf("GitHub Actions") > 0);
+assert.ok(read("js/cloud.js").indexOf("reauthenticateWithCredential") > 0);
+assert.ok(read("js/admin.js").indexOf("目前密碼") > 0);
+assert.ok(read("js/app.js").indexOf("listSessions") < 0);
+assert.ok(read("js/admin.js").indexOf("listSessions") > 0);
 assert.ok(read("README.md").indexOf("Firebase") > 0);
 assert.ok(read("README.md").indexOf("js/firebase-config.js") > 0);
 assert.ok(read("README.md").indexOf("firestore.rules") > 0);
@@ -107,7 +198,8 @@ function walk(dir) {
 }
 walk(root);
 
-assert.ok(read("sw.js").indexOf('var VERSION = "v2"') > 0);
+assert.ok(read("sw.js").indexOf('var VERSION = "v3"') > 0);
+assert.ok(read("README.md").indexOf("`v3`") > 0);
 var manifest = JSON.parse(read("manifest.webmanifest"));
 assert.strictEqual(manifest.name, "普通話拼音練習");
 assert.strictEqual(manifest.lang, "zh-Hant");

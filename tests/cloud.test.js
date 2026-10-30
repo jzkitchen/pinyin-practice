@@ -123,12 +123,17 @@ async function main() {
   assert.strictEqual(remote.firebaseConfigured(), true);
   assert.strictEqual(remote.bundledDemo(), false);
   assert.strictEqual((await remote.listSets()).length, 0);
+  await assert.rejects(remote.listSessions(), /家長/);
   await assert.rejects(remote.signIn("parent@example.com", "nope"), function (err) {
     assert.strictEqual(err.code, "auth/wrong-password");
     return true;
   });
-  var signed = await remote.signIn("parent@example.com", "secret");
-  assert.strictEqual(signed.email, "parent@example.com");
+  var stranger = await remote.signIn("stranger@example.com", "secret");
+  assert.strictEqual(stranger.email, "stranger@example.com");
+  await assert.rejects(remote.listSessions(), /家長/);
+  await remote.signOut();
+  var signed = await remote.signIn(config.parentEmail, "secret");
+  assert.strictEqual(signed.email, config.parentEmail);
   var made = await remote.createSet("動物");
   assert.strictEqual(made.name, "動物");
   assert.ok(db.rows.sets.has(made.id));
@@ -173,6 +178,20 @@ async function main() {
   });
   assert.strictEqual((await remote.listSessions())[0].id, practice.id);
   assert.ok(db.rows.sessions.has(practice.id));
+  assert.deepStrictEqual(Object.keys(db.rows.sessions.get(practice.id)).sort(), [
+    "correct", "durationMs", "id", "mode", "setId", "startedAt", "total"
+  ]);
+  await assert.rejects(remote.changePassword("abcdef"), /目前密碼/);
+  await assert.rejects(remote.changePassword("abc", "secret"), /至少 6/);
+  await assert.rejects(remote.changePassword("abcdef", "wrong"), /目前密碼不正確/);
+  assert.strictEqual((await remote.signIn(config.parentEmail, "secret")).email, config.parentEmail);
+  await remote.changePassword("abcdef", "secret");
+  await remote.signOut();
+  await assert.rejects(remote.signIn(config.parentEmail, "secret"), function (err) {
+    assert.strictEqual(err.code, "auth/wrong-password");
+    return true;
+  });
+  assert.strictEqual((await remote.signIn(config.parentEmail, "abcdef")).email, config.parentEmail);
   await remote.deleteWord(cat.id);
   await remote.deleteSet(made.id);
   assert.strictEqual((await remote.listWords(made.id)).length, 0);
@@ -251,23 +270,47 @@ function mockFirestore() {
 }
 
 function mockAuth(password) {
-  var state = { currentUser: null, password: password };
+  var state = { currentUser: null, password: password, recent: false };
+  function buildUser(email) {
+    return {
+      email: email,
+      uid: "parent",
+      reauthenticateWithCredential: function (cred) {
+        if (!cred || cred.password !== state.password) {
+          var err = new Error("wrong");
+          err.code = "auth/wrong-password";
+          return Promise.reject(err);
+        }
+        state.recent = true;
+        return Promise.resolve();
+      },
+      updatePassword: function (next) {
+        if (!state.recent) {
+          var err = new Error("recent");
+          err.code = "auth/requires-recent-login";
+          return Promise.reject(err);
+        }
+        state.password = next;
+        state.recent = false;
+        return Promise.resolve();
+      }
+    };
+  }
   return {
     get currentUser() { return state.currentUser; },
+    EmailAuthProvider: {
+      credential: function (email, pw) {
+        return { email: email, password: pw };
+      }
+    },
     signInWithEmailAndPassword: function (email, pw) {
       if (pw !== state.password) {
         var err = new Error("wrong");
         err.code = "auth/wrong-password";
         return Promise.reject(err);
       }
-      state.currentUser = {
-        email: email,
-        uid: "parent",
-        updatePassword: function (next) {
-          state.password = next;
-          return Promise.resolve();
-        }
-      };
+      state.recent = false;
+      state.currentUser = buildUser(email);
       return Promise.resolve({ user: state.currentUser });
     },
     signOut: function () {

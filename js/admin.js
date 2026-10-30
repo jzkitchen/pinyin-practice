@@ -6,6 +6,7 @@
     sets: [],
     words: [],
     sessions: [],
+    sessionsError: "",
     currentSetId: null,
     editingSetId: null,
     editingWordId: null
@@ -86,6 +87,14 @@
     var title = document.createElement("h2");
     title.textContent = "更改密碼";
     var form = document.createElement("form");
+    var currentLabel = document.createElement("label");
+    currentLabel.setAttribute("for", "current-password");
+    currentLabel.textContent = "目前密碼";
+    var current = document.createElement("input");
+    current.id = "current-password";
+    current.type = "password";
+    current.autocomplete = "current-password";
+    current.required = true;
     var label = document.createElement("label");
     label.setAttribute("for", "next-password");
     label.textContent = "新密碼";
@@ -97,11 +106,12 @@
     var save = document.createElement("button");
     save.type = "submit";
     save.textContent = "更改密碼";
-    form.append(label, input, save);
+    form.append(currentLabel, current, label, input, save);
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      PinyinCloud.changePassword(input.value).then(function () {
+      PinyinCloud.changePassword(input.value, current.value).then(function () {
         input.value = "";
+        current.value = "";
         setStatus("已更改密碼。");
       }).catch(function (err) {
         setStatus(err.message || "無法更改密碼", "bad");
@@ -109,7 +119,7 @@
     });
     var hint = document.createElement("p");
     hint.className = "hint";
-    hint.textContent = "至少 6 個字元。也可以在 Firebase 主控台的 Authentication 裡重設。";
+    hint.textContent = "至少 6 個字元。送出前會用目前密碼再向 Firebase 確認一次。也可以在主控台的 Authentication 裡重設。";
     card.append(title, hint, form);
     return card;
   }
@@ -411,9 +421,13 @@
     title.textContent = "練習紀錄";
     var note = document.createElement("p");
     note.className = "hint";
-    note.textContent = state.sessions.length
-      ? "共 " + state.sessions.length + " 筆。"
-      : "尚無練習紀錄。做完一組點選拼音後會寫在這裡。";
+    if (state.sessionsError) {
+      note.textContent = state.sessionsError;
+    } else {
+      note.textContent = state.sessions.length
+        ? "共 " + state.sessions.length + " 筆。只有已登入的家長看得到。"
+        : "尚無練習紀錄。做完一組點選拼音後會寫在這裡。只有已登入的家長看得到。";
+    }
     card.append(title, note);
     state.sessions.forEach(function (session) {
       var row = document.createElement("p");
@@ -441,9 +455,14 @@
       }
       return refreshWords();
     }).then(function () {
-      return PinyinCloud.listSessions();
-    }).then(function (sessions) {
-      state.sessions = sessions;
+      return PinyinCloud.listSessions().then(function (sessions) {
+        state.sessions = sessions;
+        state.sessionsError = "";
+      }).catch(function (err) {
+        state.sessions = [];
+        state.sessionsError = err.message || "無法讀取練習紀錄";
+      });
+    }).then(function () {
       render();
     });
   }
