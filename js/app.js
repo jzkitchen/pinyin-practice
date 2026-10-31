@@ -1,4 +1,4 @@
-/* 練習頁。選詞組、選模式。模式 A 看字點選；模式 C 聽讀後點選。模式 B 仍是骨架。練習頁不登入。 */
+/* 練習頁。選詞組、選模式。模式 A 看字點選；模式 B 看拼音輸入繁體字；模式 C 聽讀後點選。練習頁不登入。 */
 (function () {
   "use strict";
 
@@ -147,43 +147,40 @@
     heading.textContent = "這個詞組的字詞";
     var count = document.createElement("p");
     count.className = "hint";
-    count.textContent = state.words.length
-      ? (state.mode === "C"
-        ? "共 " + state.words.length + " 個。請聽聲音作答，字和拼音先不顯示。"
-        : state.mode === "A"
-          ? "共 " + state.words.length + " 個。拼音在練習裡作答。"
-          : "共 " + state.words.length + " 個")
-      : "這個詞組還沒有字詞。";
+    if (!state.words.length) {
+      count.textContent = "這個詞組還沒有字詞。";
+    } else if (state.mode === "C") {
+      count.textContent = "共 " + state.words.length + " 個。請聽聲音作答，字和拼音先不顯示。";
+    } else if (state.mode === "A") {
+      count.textContent = "共 " + state.words.length + " 個。拼音在練習裡作答。";
+    } else if (state.mode === "B") {
+      count.textContent = "共 " + state.words.length + " 個。請看拼音作答，字先不顯示。";
+    } else {
+      count.textContent = "共 " + state.words.length + " 個";
+    }
     var list = document.createElement("ul");
     list.className = "word-list";
-    if (state.mode !== "C") state.words.forEach(function (word) {
-      var item = document.createElement("li");
-      item.className = "word-card";
-      var han = document.createElement("span");
-      han.className = "han";
-      han.textContent = word.hanzi;
-      item.appendChild(han);
-      if (state.mode === "A") {
+    if (state.mode === "A") {
+      state.words.forEach(function (word) {
+        var item = document.createElement("li");
+        item.className = "word-card";
+        var han = document.createElement("span");
+        han.className = "han";
+        han.textContent = word.hanzi;
+        item.appendChild(han);
         list.appendChild(item);
-        return;
-      }
-      var py = document.createElement("span");
-      py.className = "py";
-      py.textContent = word.pinyin;
-      item.appendChild(py);
-      if (word.accept && word.accept.length > 1) {
-        var extras = word.accept.filter(function (itemText) {
-          return PinyinGrade.normalizePinyin(itemText) !== PinyinGrade.normalizePinyin(word.pinyin);
-        });
-        if (extras.length) {
-          var alt = document.createElement("span");
-          alt.className = "alt";
-          alt.textContent = "也可：" + extras.join("、");
-          item.appendChild(alt);
-        }
-      }
-      list.appendChild(item);
-    });
+      });
+    } else if (state.mode === "B") {
+      state.words.forEach(function (word) {
+        var item = document.createElement("li");
+        item.className = "word-card";
+        var py = document.createElement("span");
+        py.className = "py";
+        py.textContent = ModeB.displayPinyin(word);
+        item.appendChild(py);
+        list.appendChild(item);
+      });
+    }
     if (state.mode === "C") listCard.append(heading, count);
     else listCard.append(heading, count, list);
 

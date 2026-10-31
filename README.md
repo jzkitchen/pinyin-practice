@@ -9,7 +9,7 @@
 - 練習頁 `index.html`：選詞組，再選練習方式。
   - A 點選拼音：看字詞，依每個字點聲母、韻母、聲調。答錯立刻看到帶調拼音，做完選定的詞組就結束。
   - C 組合拼音：先聽詞語，再依每個字點聲母、韻母、聲調。作答前不顯示漢字；答完該詞才顯示字和帶調拼音。答錯立刻看到正確拼音。
-  - B 認讀選擇：仍是「即將推出」。
+  - B 認讀選擇：看帶調拼音，輸入繁體字詞。答錯立刻看到正確的字和拼音。做完選定的詞組就結束。詞組清單只顯示拼音，避免先看到漢字。
 - 家長頁 `admin.html`：用 Firebase 家長帳號登入後，可以新增、修改、刪除詞組和字詞。
 - 練習頁不登入。字詞讀取和練習紀錄的新增都不需要家長密碼。
 
@@ -29,7 +29,7 @@ python3 -m http.server 8080
 
 這是 2026-10-30 的專家交付 v1。`js/pinyin-tables.js` 只負責載入，不另抄一份表。
 
-判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、j／q／x 後面的 u 與 ü 相同。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。模式 A 與模式 C 都把點選結果送進同一個 `PinyinGrade`，不另寫一套判定。
+判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、j／q／x 後面的 u 與 ü 相同。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。模式 A 與模式 C 都把點選結果送進同一個 `PinyinGrade`，不另寫一套判定。模式 B 不比拼音：輸入的繁體字去掉空白後，要和該詞的漢字完全相同（種子欄位 `han`，練習資料裡是 `hanzi`）。不另收簡體或異體。`accept` 仍只表示可接受的拼音，題幹用詞上的帶調拼音。
 
 ## Firebase
 
@@ -107,7 +107,7 @@ node scripts/seed-firestore.js --print
 
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v5`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
+`sw.js` 的 `VERSION` 目前是 `v6`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
 
 ## 聽讀（模式 C）
 
@@ -125,6 +125,7 @@ node scripts/seed-firestore.js --print
 node tests/grade.test.js
 node tests/cloud.test.js
 node tests/mode-a.test.js
+node tests/mode-b.test.js
 node tests/mode-c.test.js
 node tests/static.test.js
 ```
