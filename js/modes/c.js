@@ -129,6 +129,28 @@
     var engineId = prefs0.engine;
     var voiceId = prefs0.voice;
     var speechNote = "";
+    var stopDownloadBar = function () {};
+    var drawing = false;
+
+    function neuralUsable() {
+      return engineId === "neural" && Tts.isModelReady(voiceId);
+    }
+
+    function requestPrefetch(voice, how) {
+      if (ctx && typeof ctx.prefetchVoice === "function") {
+        ctx.prefetchVoice(voice, how);
+        return;
+      }
+      if (typeof window === "undefined") return;
+      if (how === "force") Tts.prefetchVoice(voice);
+      else Tts.warmupVoice(voice);
+    }
+
+    function syncPrefetch(how) {
+      var mode = how || "warmup";
+      requestPrefetch("female", mode);
+      if (engineId === "neural" && voiceId === "male") requestPrefetch("male", mode);
+    }
 
     function synthOf() {
       if (ctx && Object.prototype.hasOwnProperty.call(ctx, "speechSynthesis")) return ctx.speechSynthesis;
@@ -158,7 +180,7 @@
 
     function listening() {
       if (speechFailed) return false;
-      if (engineId === "neural") return true;
+      if (neuralUsable()) return true;
       return canUseBuiltin();
     }
 
@@ -204,7 +226,7 @@
 
     function speak(word) {
       Tts.cancel();
-      if (engineId === "neural") {
+      if (neuralUsable()) {
         var phonemes = Tts.phonemesForReadings(word && word.readings);
         var request = {
           hanzi: word && word.hanzi,
@@ -247,7 +269,7 @@
 
     function announceCurrent() {
       if (phase !== "pick" || speechFailed) return;
-      if (engineId !== "neural" && !canUseBuiltin()) return;
+      if (!canUseBuiltin() && !neuralUsable()) return;
       if (!words.length || !tables) return;
       var word = run.words[run.index];
       if (!word) return;
@@ -261,7 +283,7 @@
       var synth = synthOf();
       if (!synth || !canUseBuiltin()) return;
       var onVoices = function () {
-        if (engineId === "neural" || voiceSettled || speechFailed) return;
+        if (neuralUsable() || voiceSettled || speechFailed) return;
         if (phase !== "pick") return;
         var word = run.words[run.index];
         if (!word) return;
@@ -470,6 +492,9 @@
             if (field === "rate") rateId = Tts.writePref(speechStore, "rate", item.id);
             else if (field === "engine") engineId = Tts.writePref(speechStore, "engine", item.id);
             else voiceId = Tts.writePref(speechStore, "voice", item.id);
+            if (field === "engine" && engineId === "neural") requestPrefetch("female", "force");
+            if (field === "voice" && voiceId === "female") requestPrefetch("female", "force");
+            if (engineId === "neural" && voiceId === "male") requestPrefetch("male", "force");
             draw();
           });
           chips.appendChild(node);
@@ -495,6 +520,11 @@
     }
 
     function draw() {
+      if (drawing) return;
+      drawing = true;
+      stopDownloadBar();
+      stopDownloadBar = function () {};
+      try {
       announceCurrent();
       rootEl.replaceChildren();
       var title = document.createElement("h2");
@@ -502,6 +532,10 @@
       var intro = document.createElement("p");
       intro.textContent = copy.intro || "";
       rootEl.append(title, intro);
+      var downloads = document.createElement("div");
+      downloads.className = "piper-downloads";
+      stopDownloadBar = Tts.mountDownloadBar(downloads, function () { draw(); }) || function () {};
+      if (downloads.children && downloads.children.length) rootEl.appendChild(downloads);
 
       if (!words.length) {
         var empty = document.createElement("p");
@@ -614,8 +648,12 @@
       checkRow.className = "practice-actions";
       checkRow.appendChild(check);
       rootEl.appendChild(checkRow);
+      } finally {
+        drawing = false;
+      }
     }
 
+    syncPrefetch("warmup");
     hookVoices();
     draw();
   }

@@ -4,6 +4,7 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var Grade = require("../js/grade.js");
+var Tts = require("../js/tts.js");
 var ModeA = require("../js/modes/a.js");
 var ModeC = require("../js/modes/c.js");
 
@@ -437,6 +438,99 @@ lateRate.listeners.voiceschanged();
 assert.strictEqual(lateRate.spoken[1].rate, 1.3);
 assert.strictEqual(lateRate.spoken[1].voice.name, "Tingting");
 
+var prefetchLog = [];
+var prefetchMount = mountWith([mama], createSynth([{ lang: "zh-CN", name: "Tingting" }]), {
+  prefetchVoice: function (voice, how) { prefetchLog.push(voice + ":" + how); }
+});
+assert.deepStrictEqual(prefetchLog, ["female:warmup"]);
+findButton(prefetchMount.root, "神經模型（首次約 63MB×聲線）").click();
+assert.ok(prefetchLog.indexOf("female:force") >= 0);
+var maleAt = prefetchLog.length;
+findButton(prefetchMount.root, "男聲").click();
+assert.ok(prefetchLog.indexOf("male:force") >= 0);
+assert.strictEqual(prefetchLog.slice(maleAt).indexOf("female:force"), -1);
+findButton(prefetchMount.root, "女聲").click();
+assert.strictEqual(prefetchLog[prefetchLog.length - 1], "female:force");
+
+var bothPrefetch = [];
+mountWith([mama], createSynth([{ lang: "zh-CN", name: "Tingting" }]), {
+  storage: memoryStorage({ pinyinSpeechEngine: "neural", pinyinSpeechVoice: "male" }),
+  prefetchVoice: function (voice, how) { bothPrefetch.push(voice + ":" + how); },
+  neuralSpeak: function () { return Promise.resolve(true); }
+});
+assert.deepStrictEqual(bothPrefetch, ["female:warmup", "male:warmup"]);
+
+Tts.resetDownloads();
+var blockedCalls = [];
+var blockedSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
+mountWith([mama], blockedSynth, {
+  storage: memoryStorage({ pinyinSpeechEngine: "neural" }),
+  neuralSpeak: function (request) {
+    blockedCalls.push(request);
+    return Promise.resolve(true);
+  }
+});
+assert.strictEqual(blockedCalls.length, 0, "女聲模型未完成前不走神經模型");
+assert.strictEqual(blockedSynth.spoken.length, 1);
+assert.strictEqual(blockedSynth.spoken[0].text, "媽媽");
+assert.strictEqual(blockedSynth.spoken[0].lang, "zh-CN");
+
+function memoryCache() {
+  var store = {};
+  return {
+    match: function (url) {
+      if (!Object.prototype.hasOwnProperty.call(store, url)) return Promise.resolve(undefined);
+      return Promise.resolve(new Response(store[url].slice(0)));
+    },
+    put: function (url, response) {
+      return response.arrayBuffer().then(function (buf) { store[url] = buf; });
+    }
+  };
+}
+
+Tts.resetDownloads();
+var downloadFetches = 0;
+var downloadPromise = Tts.prefetchVoice("female", {
+  cache: memoryCache(),
+  fetch: function (url, opts) {
+    downloadFetches += 1;
+    assert.ok(String(url).indexOf("zh_CN-xiao_ya-medium.onnx") > 0);
+    assert.ok(String(url).indexOf("chaowen") < 0);
+    if (opts && opts.signal && opts.signal.aborted) {
+      var aborted = new Error("aborted");
+      aborted.name = "AbortError";
+      return Promise.reject(aborted);
+    }
+    return new Promise(function (resolve, reject) {
+      if (opts && opts.signal) {
+        opts.signal.addEventListener("abort", function () {
+          var err = new Error("aborted");
+          err.name = "AbortError";
+          reject(err);
+        });
+      }
+    });
+  }
+});
+var downloadSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
+var downloadMount = mountWith([shui], downloadSynth);
+assert.strictEqual(Tts.downloadState("female").state, "loading");
+assert.strictEqual(Tts.downloadState("male").state, "idle");
+assert.ok(textOf(downloadMount.root).indexOf("正在下載女聲模型") >= 0);
+assert.ok(findButton(downloadMount.root, "取消下載"));
+assert.strictEqual(downloadSynth.spoken[0].lang, "zh-CN");
+findButton(downloadMount.root, "取消下載").click();
+assert.strictEqual(Tts.downloadState("female").state, "cancelled");
+assert.strictEqual(findButton(downloadMount.root, "取消下載"), null);
+assert.ok(textOf(downloadMount.root).indexOf("正在下載女聲模型") < 0);
+var beforeCancelReplay = downloadSynth.spoken.length;
+findButton(downloadMount.root, "再聽一次").click();
+assert.strictEqual(downloadSynth.spoken.length, beforeCancelReplay + 1);
+assert.strictEqual(downloadSynth.spoken[downloadSynth.spoken.length - 1].lang, "zh-CN");
+assert.ok(downloadFetches <= 1);
+
+Tts.resetDownloads();
+Tts.markVoiceReady("female");
 var neuralCalls = [];
 var neuralStore = memoryStorage({
   pinyinSpeechEngine: "neural",
@@ -451,7 +545,7 @@ var neuralMount = mountWith([mama], neuralSynth, {
     return Promise.resolve(true);
   }
 });
-assert.strictEqual(neuralSynth.spoken.length, 0, "神經模型不走 speechSynthesis");
+assert.strictEqual(neuralSynth.spoken.length, 0, "模型已就緒時神經模型不走 speechSynthesis");
 assert.strictEqual(neuralCalls.length, 1);
 assert.strictEqual(neuralCalls[0].voice, "female");
 assert.strictEqual(neuralCalls[0].rate, 1);
@@ -464,18 +558,27 @@ assert.strictEqual(neuralStore.getItem("pinyinSpeechVoice"), "male");
 assert.strictEqual(neuralStore.getItem("pinyinSpeechRate"), "slow");
 assert.strictEqual(neuralCalls.length, 1, "改聲線或語速本身不重播");
 findButton(neuralMount.root, "再聽一次").click();
+assert.strictEqual(neuralCalls.length, 1, "男聲模型未完成前改走系統內建");
+assert.strictEqual(neuralSynth.spoken.length, 1);
+assert.strictEqual(neuralSynth.spoken[0].text, "媽媽");
+assert.strictEqual(neuralSynth.spoken[0].lang, "zh-CN");
+assert.strictEqual(neuralSynth.spoken[0].rate, 0.7);
+Tts.markVoiceReady("male");
+findButton(neuralMount.root, "再聽一次").click();
 assert.strictEqual(neuralCalls.length, 2);
 assert.strictEqual(neuralCalls[1].voice, "male");
 assert.strictEqual(neuralCalls[1].rate, 0.7);
 assert.strictEqual(neuralCalls[1].lengthScale, 1 / 0.7);
 assert.strictEqual(neuralCalls[1].hanzi, "媽媽");
 findButton(neuralMount.root, "系統內建").click();
-assert.strictEqual(neuralSynth.spoken.length, 0);
 findButton(neuralMount.root, "再聽一次").click();
 assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].text, "媽媽");
 assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].rate, 0.7);
 assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].voice.name, "Microsoft Yunyang");
+assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].lang, "zh-CN");
 
+Tts.resetDownloads();
+Tts.markVoiceReady("female");
 var fallbackCalls = 0;
 var fallbackSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
 var fallbackMount = mountWith([mama], fallbackSynth, {
