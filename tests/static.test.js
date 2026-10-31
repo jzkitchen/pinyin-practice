@@ -198,11 +198,11 @@ function walk(dir) {
 }
 walk(root);
 
-assert.ok(read("sw.js").indexOf('var VERSION = "v5"') > 0);
-assert.ok(read("README.md").indexOf("`v5`") > 0);
-assert.ok(read("TECH.md").indexOf("`v5`") > 0);
-assert.ok(read("js/admin.js").indexOf("點選拼音（模式 A）與組合拼音（模式 C）已可練習") > 0);
-assert.ok(read("js/admin.js").indexOf("認讀選擇（模式 B）尚未開放") > 0);
+assert.ok(read("sw.js").indexOf('var VERSION = "v6"') > 0);
+assert.ok(read("README.md").indexOf("`v6`") > 0);
+assert.ok(read("TECH.md").indexOf("`v6`") > 0);
+assert.ok(read("js/admin.js").indexOf("點選拼音（模式 A）、認讀選擇（模式 B）與組合拼音（模式 C）皆可練習。") > 0);
+assert.ok(read("js/admin.js").indexOf("尚未開放") < 0);
 assert.ok(read("js/admin.js").indexOf("認讀選擇和組合拼音尚未開放") < 0);
 assert.ok(read("js/admin.js").indexOf("組合拼音尚未開放") < 0);
 var manifest = JSON.parse(read("manifest.webmanifest"));
@@ -218,8 +218,15 @@ assert.ok(read("js/modes/a.js").indexOf("copy.name") > 0);
 assert.ok(read("js/modes/b.js").indexOf("copy.name") > 0);
 assert.ok(read("js/modes/c.js").indexOf("copy.name") > 0);
 assert.ok(read("js/modes/a.js").indexOf("即將推出") < 0);
-assert.ok(read("js/modes/b.js").indexOf("即將推出") > 0);
+assert.ok(read("js/modes/b.js").indexOf("即將推出") < 0);
+assert.ok(read("js/modes/b.js").indexOf('mode: "B"') > 0);
 assert.ok(read("js/modes/c.js").indexOf("即將推出") < 0);
+assert.ok(read("js/app.js").indexOf("請看拼音作答，字先不顯示") > 0);
+var css = read("styles.css");
+assert.ok(css.indexOf('"Noto Sans"') > 0 && css.indexOf('"Noto Sans"') < css.indexOf('"WenQuanYi Micro Hei"'), "第三聲字型要排在文泉驛前面");
+assert.ok(read("index.html").indexOf("認讀選擇") > 0);
+assert.ok(read("README.md").indexOf("仍是「即將推出」") < 0);
+assert.ok(read("TECH.md").indexOf("即將推出") < 0);
 assert.ok(read("js/modes/c.js").indexOf("speechSynthesis") > 0);
 assert.ok(read("js/modes/c.js").indexOf("zh-CN") > 0);
 assert.ok(read("js/modes/c.js").indexOf('record.mode = "C"') > 0);

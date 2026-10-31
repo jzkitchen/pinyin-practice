@@ -61,7 +61,7 @@
     app.replaceChildren();
     var intro = document.createElement("p");
     intro.className = "hint";
-    intro.textContent = "儲存位置：" + storageLabel() + "。點選拼音（模式 A）與組合拼音（模式 C）已可練習；認讀選擇（模式 B）尚未開放。";
+    intro.textContent = "儲存位置：" + storageLabel() + "。點選拼音（模式 A）、認讀選擇（模式 B）與組合拼音（模式 C）皆可練習。";
 
     var logout = document.createElement("button");
     logout.type = "button";
@@ -426,7 +426,7 @@
     } else {
       note.textContent = state.sessions.length
         ? "共 " + state.sessions.length + " 筆。只有已登入的家長看得到。"
-        : "尚無練習紀錄。做完一組點選拼音後會寫在這裡。只有已登入的家長看得到。";
+        : "尚無練習紀錄。做完一組練習後會寫在這裡。只有已登入的家長看得到。";
     }
     card.append(title, note);
     state.sessions.forEach(function (session) {

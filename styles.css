@@ -18,7 +18,8 @@
 html, body { margin: 0; }
 
 body {
-  font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "WenQuanYi Micro Hei", sans-serif;
+  /* 文泉驛微米黑把 ǐ、ǎ 這類第三聲做成空字形，會把 nǐ hǎo 畫成 n h o。拉丁字型要排在它前面。 */
+  font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Noto Sans", "DejaVu Sans", "WenQuanYi Micro Hei", sans-serif;
   color: var(--ink);
   background: var(--bg);
   line-height: 1.55;
@@ -313,8 +314,28 @@ button:disabled {
   letter-spacing: 0.04em;
 }
 
+.practice-pinyin {
+  margin: 4px 0 12px;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  color: var(--accent-deep);
+}
+
+.han-form label { margin-top: 0; }
+
+.han-input {
+  font-size: 1.6rem;
+  text-align: center;
+  min-height: 56px;
+  letter-spacing: 0.08em;
+}
+
 @media (max-width: 640px) {
   .modes { grid-template-columns: 1fr; }
   .row { align-items: flex-start; flex-direction: column; }
   .practice-han { font-size: 2.6rem; }
+  .practice-pinyin { font-size: 1.7rem; }
+  .han-input { font-size: 1.35rem; }
 }
