@@ -300,7 +300,7 @@ assert.strictEqual(findButton(heard.root, "慢").getAttribute("aria-pressed"), "
 assert.strictEqual(findButton(heard.root, "正常").getAttribute("aria-pressed"), "true");
 assert.strictEqual(findButton(heard.root, "快").getAttribute("aria-pressed"), "false");
 assert.strictEqual(findButton(heard.root, "系統內建").getAttribute("aria-pressed"), "true");
-assert.strictEqual(findButton(heard.root, "神經模型（首次約 63MB×聲線）").getAttribute("aria-pressed"), "false");
+assert.strictEqual(findButton(heard.root, "神經模型").getAttribute("aria-pressed"), "false");
 assert.strictEqual(findButton(heard.root, "女聲").getAttribute("aria-pressed"), "true");
 assert.strictEqual(findButton(heard.root, "男聲").getAttribute("aria-pressed"), "false");
 assert.ok(findSlot(heard.root, 0), "兩個字要同時看到格子");
@@ -316,6 +316,8 @@ assert.ok(textOf(heard.root).indexOf("齊齒") >= 0);
 assert.ok(textOf(heard.root).indexOf("合口") >= 0);
 assert.ok(textOf(heard.root).indexOf("撮口") >= 0);
 assert.ok(textOf(heard.root).indexOf("這個音不用選聲母") >= 0);
+assert.ok(textOf(heard.root).indexOf("拼法參考") < 0);
+assert.ok(textOf(heard.root).indexOf("書本寫") < 0);
 assert.ok(textOf(heard.root).indexOf("整體認讀") < 0);
 assert.strictEqual(findButton(heard.root, "零"), null);
 assert.strictEqual(findButton(heard.root, "y"), null);
@@ -461,7 +463,7 @@ var prefetchMount = mountWith([mama], createSynth([{ lang: "zh-CN", name: "Tingt
   prefetchVoice: function (voice, how) { prefetchLog.push(voice + ":" + how); }
 });
 assert.deepStrictEqual(prefetchLog, ["female:warmup"]);
-findButton(prefetchMount.root, "神經模型（首次約 63MB×聲線）").click();
+findButton(prefetchMount.root, "神經模型").click();
 assert.ok(prefetchLog.indexOf("female:force") >= 0);
 var maleAt = prefetchLog.length;
 findButton(prefetchMount.root, "男聲").click();
@@ -569,7 +571,7 @@ assert.strictEqual(neuralCalls[0].voice, "female");
 assert.strictEqual(neuralCalls[0].rate, 1);
 assert.strictEqual(neuralCalls[0].lengthScale, 1);
 assert.deepStrictEqual(neuralCalls[0].phonemes, ["m", "a", "1", "m", "a", "5"]);
-assert.strictEqual(findButton(neuralMount.root, "神經模型（首次約 63MB×聲線）").getAttribute("aria-pressed"), "true");
+assert.strictEqual(findButton(neuralMount.root, "神經模型").getAttribute("aria-pressed"), "true");
 findButton(neuralMount.root, "男聲").click();
 findButton(neuralMount.root, "慢").click();
 assert.strictEqual(neuralStore.getItem("pinyinSpeechVoice"), "male");

@@ -17,7 +17,7 @@ assert.strictEqual(Tts.speechRateKey, "pinyinSpeechRate");
 assert.strictEqual(Tts.speechEngineKey, "pinyinSpeechEngine");
 assert.strictEqual(Tts.speechVoiceKey, "pinyinSpeechVoice");
 assert.strictEqual(Tts.engines[0].label, "系統內建");
-assert.strictEqual(Tts.engines[1].label, "神經模型（首次約 63MB×聲線）");
+assert.strictEqual(Tts.engines[1].label, "神經模型");
 assert.strictEqual(Tts.voices[0].label, "女聲");
 assert.strictEqual(Tts.voices[1].label, "男聲");
 assert.strictEqual(Tts.rateById("slow"), 0.7);
