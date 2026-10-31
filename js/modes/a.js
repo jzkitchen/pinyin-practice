@@ -1,5 +1,6 @@
 /* 模式 A 點選拼音。
- * 看到整詞，每個字一格，一次送出整詞。對錯只走 PinyinGrade 和該詞 accept。
+ * 看到整詞，每個音節一格，一次送出整詞。對錯只走 PinyinGrade 和該詞 accept。
+ * 兒化音節（例如「信兒」）選完聲母、韻母、聲調後，可按「兒化」在該音節末尾加 r。
  */
 (function (root, factory) {
   var api = factory();
@@ -117,7 +118,7 @@
 
   function preferredPinyin(word, index) {
     var reading = word.readings[index];
-    return gradeApi().spellSyllable(reading.initial, reading.final, reading.tone);
+    return gradeApi().spellSyllable(reading.initial, reading.final, reading.tone, reading.erhua);
   }
 
   function spacedPinyin(word) {
@@ -164,7 +165,8 @@
         return {
           initial: choice.initial || "",
           final: choice.final,
-          tone: Number(choice.tone)
+          tone: Number(choice.tone),
+          erhua: !!choice.erhua
         };
       });
       ok = gradeApi().gradeAttempt(attempt, word).ok;
@@ -209,6 +211,53 @@
 
   function charsOf(text) {
     return Array.from(String(text || ""));
+  }
+
+  function syllableLabels(word) {
+    var readings = word && Array.isArray(word.readings) ? word.readings : [];
+    var syllables = word && word.syllables;
+    if (Array.isArray(syllables) && syllables.length === readings.length && readings.length) {
+      return syllables.map(function (syl) {
+        return String((syl && syl.han) || "");
+      });
+    }
+    var chars = charsOf((word && (word.hanzi || word.han)) || "");
+    if (chars.length === readings.length) return chars;
+    return readings.map(function (_, index) {
+      return chars[index] || "";
+    });
+  }
+
+  function erhuaToggleState(reading, slot) {
+    var complete = !!(slot && slot.final != null && slot.tone != null);
+    var offered = !!(reading && reading.erhua && complete);
+    var spelled = "";
+    if (complete) {
+      spelled = gradeApi().spellSyllable(slot.initial || "", slot.final, Number(slot.tone), !!(slot && slot.erhua));
+    }
+    return {
+      offered: offered,
+      pressed: offered && !!slot.erhua,
+      spelled: spelled
+    };
+  }
+
+  function appendErhuaToggle(parent, reading, slot, onToggle) {
+    var state = erhuaToggleState(reading, slot);
+    if (!state.offered || !parent || typeof document === "undefined") return;
+    var row = document.createElement("div");
+    row.className = "erhua-row";
+    var button = document.createElement("button");
+    button.type = "button";
+    button.id = "erhua-toggle";
+    button.className = "pick erhua-toggle";
+    button.textContent = "兒化";
+    button.setAttribute("aria-pressed", state.pressed ? "true" : "false");
+    button.addEventListener("click", function () {
+      if (typeof onToggle === "function") onToggle();
+    });
+    row.appendChild(button);
+    parent.appendChild(row);
   }
 
   function pickerApi() {
@@ -282,7 +331,7 @@
       if (!words.length) {
         var empty = document.createElement("p");
         empty.className = "prompt";
-        empty.textContent = "請先選擇有字詞的詞組。";
+        empty.textContent = "請先選擇有字詞的單元。";
         root.appendChild(empty);
         return;
       }
@@ -316,7 +365,7 @@
       prompt.textContent = fill(textOf(copy, "prompt"), "{詞}", word.hanzi);
       var han = document.createElement("p");
       han.className = "practice-han";
-      charsOf(word.hanzi).forEach(function (ch, index) {
+      syllableLabels(word).forEach(function (ch, index) {
         var span = document.createElement("span");
         if (phase === "pick" && index === active) span.className = "current-char";
         span.textContent = ch;
@@ -326,7 +375,15 @@
       progress.className = "hint practice-progress";
       progress.textContent = "第 " + view.progress + " 題，共 " + run.total + " 題";
       if (phase === "feedback") root.append(prompt, han, progress);
-      else root.append(before, prompt, han, slotRow(word), progress);
+      else {
+        root.append(before, prompt, han, slotRow(word), progress);
+        appendErhuaToggle(root, word.readings[active], activeSlot(), function () {
+          var slot = slots[active];
+          if (!slot) return;
+          slot.erhua = !slot.erhua;
+          draw();
+        });
+      }
 
       if (phase === "feedback" && last) {
         var feedback = document.createElement("p");
@@ -363,7 +420,7 @@
       check.addEventListener("click", function () {
         if (!readyToCheck()) return;
         last = submit(run, slots.map(function (slot) {
-          return { initial: slot.initial || "", final: slot.final, tone: slot.tone };
+          return { initial: slot.initial || "", final: slot.final, tone: slot.tone, erhua: !!slot.erhua };
         }));
         phase = "feedback";
         draw();
@@ -392,13 +449,13 @@
 
     function slotSpell(slot) {
       if (!slotDone(slot)) return "？";
-      return gradeApi().spellSyllable(slot.initial || "", slot.final, slot.tone);
+      return gradeApi().spellSyllable(slot.initial || "", slot.final, slot.tone, !!slot.erhua);
     }
 
     function slotRow(word) {
       var row = document.createElement("div");
       row.className = "slots";
-      charsOf(word.hanzi).forEach(function (ch, index) {
+      syllableLabels(word).forEach(function (ch, index) {
         var node = document.createElement("button");
         node.type = "button";
         node.className = "slot" + (index === active ? " current" : "");
@@ -430,6 +487,9 @@
     syllableLine: syllableLine,
     wrongLine: wrongLine,
     gradeSyllable: gradeSyllable,
+    syllableLabels: syllableLabels,
+    erhuaToggleState: erhuaToggleState,
+    appendErhuaToggle: appendErhuaToggle,
     createRun: createRun,
     submit: submit,
     sessionRecord: sessionRecord

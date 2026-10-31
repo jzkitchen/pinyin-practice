@@ -422,6 +422,14 @@ button.slot[aria-pressed="true"] {
 
 .slot-py { font-size: 0.95rem; color: var(--accent-deep); }
 
+.erhua-row {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 8px;
+}
+
+button.erhua-toggle { min-width: 5.5rem; }
+
 .listen-panel {
   display: flex;
   flex-direction: column;

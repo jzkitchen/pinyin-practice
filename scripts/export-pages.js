@@ -1,5 +1,5 @@
 /* 組出 GitHub Pages 成品。只複製練習站需要的靜態檔。
- * firestore.rules、firebase.json、tests、scripts、worker 留在 git，不進網站。
+ * tests、scripts、worker 留在 git，不進網站。
  */
 "use strict";
 
@@ -9,20 +9,19 @@ var path = require("path");
 var ALLOW = [
   ".nojekyll",
   "index.html",
-  "admin.html",
   "styles.css",
   "manifest.webmanifest",
   "sw.js",
   "data/pinyin_tables_and_seeds_v1.json",
   "data/book_pinyin_table_v1.json",
+  "data/units/unit-01.json",
   "js/config.js",
-  "js/firebase-config.js",
   "js/pinyin-tables.js",
   "js/grade.js",
   "js/syllable-picker.js",
-  "js/cloud.js",
+  "js/units.js",
+  "js/sessions.js",
   "js/app.js",
-  "js/admin.js",
   "js/tts.js",
   "js/modes/a.js",
   "js/modes/b.js",

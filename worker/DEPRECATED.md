@@ -1,7 +1,5 @@
 # DEPRECATED
 
-`worker/` 已停用，請勿部署 Cloudflare Worker 或 D1。
+這份 Cloudflare Worker 是舊草稿，不要部署。靜態網站不呼叫它。
 
-雲端儲存改走 Firebase：Firestore 集合 `sets`、`words`、`sessions`，家長登入用 Firebase Auth。設定見倉庫根目錄的 `README.md` 和 `js/firebase-config.js`。
-
-這個目錄的程式留著只為對照舊草稿，靜態網站不會呼叫它。
+練習字詞在倉庫的 `data/units/`。練習紀錄只存在瀏覽器的 localStorage（`js/sessions.js`）。

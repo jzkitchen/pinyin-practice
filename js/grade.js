@@ -158,12 +158,12 @@
     return chars.join("");
   }
 
-  function spellSyllable(initial, final, tone) {
+  function spellSyllable(initial, final, tone, erhua) {
     var ini = initial || "";
     var written = spellFinal(ini, final);
     var marked = applyToneMark(written, Number(tone) || 0);
-    if (!ini) return marked;
-    return ini + marked;
+    var text = ini ? ini + marked : marked;
+    return erhua ? text + "r" : text;
   }
 
   function cleanChars(input) {
@@ -353,7 +353,7 @@
 
   function spellReadings(readings) {
     return readings.map(function (reading) {
-      return spellSyllable(reading.initial, reading.final, reading.tone);
+      return spellSyllable(reading.initial, reading.final, reading.tone, reading && reading.erhua);
     }).join("");
   }
 

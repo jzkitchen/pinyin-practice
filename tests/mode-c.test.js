@@ -5,6 +5,7 @@ var fs = require("fs");
 var path = require("path");
 var Grade = require("../js/grade.js");
 var Tts = require("../js/tts.js");
+var Units = require("../js/units.js");
 var ModeA = require("../js/modes/a.js");
 var ModeC = require("../js/modes/c.js");
 
@@ -596,6 +597,61 @@ assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].text, "媽�
 assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].rate, 0.7);
 assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].voice.name, "Microsoft Yunyang");
 assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].lang, "zh-CN");
+
+var kou = Units.mapUnit(JSON.parse(fs.readFileSync(path.join(__dirname, "../data/units/unit-01.json"), "utf8")), "unit-01")
+  .words.find(function (word) { return word.id === "u1_04"; });
+
+function slotPy(root, index) {
+  var slot = findSlot(root, index);
+  var text = "";
+  (slot.children || []).forEach(function (child) {
+    if (String(child.className).indexOf("slot-py") >= 0) text = child.textContent;
+  });
+  return text;
+}
+
+function mountModeA(words) {
+  var doc = createDocument();
+  global.document = doc;
+  var root = doc.createElement("div");
+  ModeA.mount(root, {
+    copy: data.mode_copy.A,
+    words: words,
+    tables: data,
+    setId: "unit-01"
+  });
+  return { root: root, doc: doc };
+}
+
+var erhua = mountModeA([kou]);
+assert.ok(findSlot(erhua.root, 0));
+assert.ok(findSlot(erhua.root, 1));
+assert.strictEqual(findSlot(erhua.root, 2), null, "口信兒是兩個音節，不拆兒");
+assert.ok(textOf(erhua.root).indexOf("信兒") >= 0);
+assert.strictEqual(findButton(erhua.root, "兒化"), null);
+fillSlot(erhua.root, 1, "x", "in", 4);
+assert.ok(findButton(erhua.root, "兒化"), "選完兒化音節才出現開關");
+assert.strictEqual(findButton(erhua.root, "兒化").getAttribute("aria-pressed"), "false");
+assert.strictEqual(slotPy(erhua.root, 1), "xìn");
+findButton(erhua.root, "兒化").click();
+assert.strictEqual(findButton(erhua.root, "兒化").getAttribute("aria-pressed"), "true");
+assert.strictEqual(slotPy(erhua.root, 1), "xìnr");
+fillSlot(erhua.root, 0, "k", "ou", 3);
+assert.strictEqual(slotPy(erhua.root, 1), "xìnr");
+findButton(erhua.root, "確定").click();
+assert.ok(textOf(erhua.root).indexOf("kǒu xìnr") >= 0);
+
+var plain = mountModeA([kou]);
+fillSlot(plain.root, 0, "k", "ou", 3);
+fillSlot(plain.root, 1, "x", "in", 4);
+assert.strictEqual(findButton(plain.root, "兒化").getAttribute("aria-pressed"), "false");
+findButton(plain.root, "確定").click();
+assert.ok(textOf(plain.root).indexOf("完成") >= 0, "不按兒化仍接受 kǒuxìn");
+
+var heardSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
+var heard = mountWith([kou], heardSynth);
+assert.strictEqual(findSlot(heard.root, 2), null);
+assert.strictEqual(heardSynth.spoken[0].text, "口信兒");
 
 Tts.resetDownloads();
 Tts.markVoiceReady("female");

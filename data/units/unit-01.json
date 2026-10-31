@@ -1,0 +1,360 @@
+{
+  "version": "unit1-words-1",
+  "date": "2026-10-31",
+  "unit": "單元一",
+  "source_images": [
+    "/workspace/pinyin-ui-feedback/unit1/unit1-a.jpg",
+    "/workspace/pinyin-ui-feedback/unit1/unit1-b.jpg"
+  ],
+  "erhua_answer_recommendation": "E1",
+  "words": [
+    {
+      "id": "u1_01",
+      "han": "上班",
+      "pinyin": "shàngbān",
+      "pinyin_display": "shàng bān",
+      "tones": [
+        4,
+        1
+      ],
+      "accept": [
+        "shàngbān"
+      ],
+      "syllables": [
+        {
+          "han": "上",
+          "pinyin": "shàng",
+          "shengmu": "sh",
+          "yunmu": "ang",
+          "tone": 4,
+          "accept": [
+            "shàng"
+          ]
+        },
+        {
+          "han": "班",
+          "pinyin": "bān",
+          "shengmu": "b",
+          "yunmu": "an",
+          "tone": 1,
+          "accept": [
+            "bān"
+          ]
+        }
+      ],
+      "tags": [],
+      "notes": "書本標音；「上」此處讀 shàng（非 shǎng）。"
+    },
+    {
+      "id": "u1_02",
+      "han": "帶",
+      "pinyin": "dài",
+      "pinyin_display": "dài",
+      "tones": [
+        4
+      ],
+      "accept": [
+        "dài"
+      ],
+      "syllables": [
+        {
+          "han": "帶",
+          "pinyin": "dài",
+          "shengmu": "d",
+          "yunmu": "ai",
+          "tone": 4,
+          "accept": [
+            "dài"
+          ]
+        }
+      ],
+      "tags": [],
+      "notes": "本課義為「攜帶」；讀 dài。不收其他義項生僻音。"
+    },
+    {
+      "id": "u1_03",
+      "han": "手機",
+      "pinyin": "shǒujī",
+      "pinyin_display": "shǒu jī",
+      "tones": [
+        3,
+        1
+      ],
+      "accept": [
+        "shǒujī"
+      ],
+      "syllables": [
+        {
+          "han": "手",
+          "pinyin": "shǒu",
+          "shengmu": "sh",
+          "yunmu": "ou",
+          "tone": 3,
+          "accept": [
+            "shǒu"
+          ]
+        },
+        {
+          "han": "機",
+          "pinyin": "jī",
+          "shengmu": "j",
+          "yunmu": "i",
+          "tone": 1,
+          "accept": [
+            "jī"
+          ]
+        }
+      ],
+      "tags": [],
+      "notes": ""
+    },
+    {
+      "id": "u1_04",
+      "han": "口信兒",
+      "pinyin": "kǒuxìnr",
+      "pinyin_display": "kǒu xìnr",
+      "tones": [
+        3,
+        4
+      ],
+      "accept": [
+        "kǒuxìnr",
+        "kǒuxìn"
+      ],
+      "erhua": true,
+      "syllables": [
+        {
+          "han": "口",
+          "pinyin": "kǒu",
+          "shengmu": "k",
+          "yunmu": "ou",
+          "tone": 3,
+          "accept": [
+            "kǒu"
+          ]
+        },
+        {
+          "han": "信兒",
+          "pinyin": "xìnr",
+          "shengmu": "x",
+          "yunmu": "in",
+          "tone": 4,
+          "erhua": true,
+          "base_pinyin": "xìn",
+          "accept": [
+            "xìnr"
+          ]
+        }
+      ],
+      "tags": [
+        "erhua"
+      ],
+      "notes": "書本寫兒化 xìnr（信＋兒合為一音節寫法）。展示正解用 kǒu xìnr。整詞 accept 兼收無兒化 kǒuxìn（口語／非兒化說法常見），音節作答時兒化題以 xìnr 為首選；若 Mode A／C 無法鍵入兒化，見交付說明「兒化作答」。"
+    },
+    {
+      "id": "u1_05",
+      "han": "轉告",
+      "pinyin": "zhuǎngào",
+      "pinyin_display": "zhuǎn gào",
+      "tones": [
+        3,
+        4
+      ],
+      "accept": [
+        "zhuǎngào"
+      ],
+      "syllables": [
+        {
+          "han": "轉",
+          "pinyin": "zhuǎn",
+          "shengmu": "zh",
+          "yunmu": "uan",
+          "tone": 3,
+          "accept": [
+            "zhuǎn"
+          ]
+        },
+        {
+          "han": "告",
+          "pinyin": "gào",
+          "shengmu": "g",
+          "yunmu": "ao",
+          "tone": 4,
+          "accept": [
+            "gào"
+          ]
+        }
+      ],
+      "tags": [
+        "polyphone_narrowed"
+      ],
+      "notes": "「轉」此處讀 zhuǎn，不收 zhuàn（轉動）。"
+    },
+    {
+      "id": "u1_06",
+      "han": "知道",
+      "pinyin": "zhīdao",
+      "pinyin_display": "zhī dao",
+      "tones": [
+        1,
+        0
+      ],
+      "accept": [
+        "zhīdao",
+        "zhīdào"
+      ],
+      "syllables": [
+        {
+          "han": "知",
+          "pinyin": "zhī",
+          "shengmu": "zh",
+          "yunmu": "i",
+          "tone": 1,
+          "accept": [
+            "zhī"
+          ]
+        },
+        {
+          "han": "道",
+          "pinyin": "dao",
+          "shengmu": "d",
+          "yunmu": "ao",
+          "tone": 0,
+          "accept": [
+            "dao",
+            "dào"
+          ]
+        }
+      ],
+      "tags": [
+        "neutral_tone"
+      ],
+      "notes": "書本「道」輕聲。accept 兼收本調 dào（朗讀／字典音）。展示正解用 zhī dao。"
+    },
+    {
+      "id": "u1_07",
+      "han": "一定",
+      "pinyin": "yídìng",
+      "pinyin_display": "yí dìng",
+      "tones": [
+        2,
+        4
+      ],
+      "accept": [
+        "yídìng",
+        "yīdìng"
+      ],
+      "syllables": [
+        {
+          "han": "一",
+          "pinyin": "yí",
+          "shengmu": "",
+          "yunmu": "i",
+          "tone": 2,
+          "tone_sandhi": true,
+          "citation": "yī",
+          "accept": [
+            "yí",
+            "yī"
+          ]
+        },
+        {
+          "han": "定",
+          "pinyin": "dìng",
+          "shengmu": "d",
+          "yunmu": "ing",
+          "tone": 4,
+          "accept": [
+            "dìng"
+          ]
+        }
+      ],
+      "tags": [
+        "tone_sandhi"
+      ],
+      "notes": "書本已標變調：一在去聲前讀 yí（陽平）。展示正解用 yí dìng。accept 兼收字典本音 yīdìng；不收誤變 yìdìng（那是去聲前以外的規則誤用——一在去聲前應為 yí）。補充：一在陰平／陽平／上聲前變 yì，本詞不適用。"
+    },
+    {
+      "id": "u1_08",
+      "han": "告訴",
+      "pinyin": "gàosu",
+      "pinyin_display": "gào su",
+      "tones": [
+        4,
+        0
+      ],
+      "accept": [
+        "gàosu",
+        "gàosù"
+      ],
+      "syllables": [
+        {
+          "han": "告",
+          "pinyin": "gào",
+          "shengmu": "g",
+          "yunmu": "ao",
+          "tone": 4,
+          "accept": [
+            "gào"
+          ]
+        },
+        {
+          "han": "訴",
+          "pinyin": "su",
+          "shengmu": "s",
+          "yunmu": "u",
+          "tone": 0,
+          "accept": [
+            "su",
+            "sù"
+          ]
+        }
+      ],
+      "tags": [
+        "neutral_tone"
+      ],
+      "notes": "書本「訴」輕聲。accept 兼收本調 sù。展示正解用 gào su。"
+    },
+    {
+      "id": "u1_09",
+      "han": "客氣",
+      "pinyin": "kèqi",
+      "pinyin_display": "kè qi",
+      "tones": [
+        4,
+        0
+      ],
+      "accept": [
+        "kèqi",
+        "kèqì"
+      ],
+      "syllables": [
+        {
+          "han": "客",
+          "pinyin": "kè",
+          "shengmu": "k",
+          "yunmu": "e",
+          "tone": 4,
+          "accept": [
+            "kè"
+          ]
+        },
+        {
+          "han": "氣",
+          "pinyin": "qi",
+          "shengmu": "q",
+          "yunmu": "i",
+          "tone": 0,
+          "accept": [
+            "qi",
+            "qì"
+          ]
+        }
+      ],
+      "tags": [
+        "neutral_tone"
+      ],
+      "notes": "書本「氣」輕聲。accept 兼收本調 qì。展示正解用 kè qi。"
+    }
+  ]
+}
