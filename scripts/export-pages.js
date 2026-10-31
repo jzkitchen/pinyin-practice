@@ -21,6 +21,7 @@ var ALLOW = [
   "js/cloud.js",
   "js/app.js",
   "js/admin.js",
+  "js/tts.js",
   "js/modes/a.js",
   "js/modes/b.js",
   "js/modes/c.js",

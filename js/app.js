@@ -20,60 +20,6 @@
     return node;
   }
 
-  function renderTables(data) {
-    var box = document.createElement("div");
-    box.className = "table-block";
-
-    var smTitle = document.createElement("h3");
-    smTitle.textContent = "聲母";
-    var sm = document.createElement("div");
-    sm.className = "chips";
-    data.shengmu.forEach(function (item) {
-      var chip = document.createElement("span");
-      chip.className = "chip";
-      chip.textContent = item.label;
-      sm.appendChild(chip);
-    });
-
-    var ymTitle = document.createElement("h3");
-    ymTitle.textContent = "韻母";
-    var groups = document.createElement("div");
-    var seen = [];
-    data.yunmu.forEach(function (item) {
-      if (seen.indexOf(item.group) === -1) seen.push(item.group);
-    });
-    seen.forEach(function (group) {
-      var heading = document.createElement("h4");
-      heading.textContent = group;
-      var row = document.createElement("div");
-      row.className = "chips";
-      data.yunmu.filter(function (item) { return item.group === group; }).forEach(function (item) {
-        var chip = document.createElement("span");
-        chip.className = "chip";
-        chip.textContent = item.label;
-        row.appendChild(chip);
-      });
-      groups.append(heading, row);
-    });
-
-    var sdTitle = document.createElement("h3");
-    sdTitle.textContent = "聲調";
-    var sd = document.createElement("div");
-    sd.className = "chips";
-    data.shengdiao.forEach(function (item) {
-      var chip = document.createElement("span");
-      chip.className = "chip";
-      chip.textContent = item.label + " " + item.mark;
-      sd.appendChild(chip);
-    });
-
-    var note = document.createElement("p");
-    note.className = "hint";
-    note.textContent = "聲母、韻母、聲調依專家交付 v1。其後若有修訂，以 data/pinyin_tables_and_seeds_v1.json 為準。";
-    box.append(smTitle, sm, ymTitle, groups, sdTitle, sd, note);
-    return box;
-  }
-
   function render() {
     var data = PinyinTables.get();
     var copy = data.mode_copy[state.mode];
@@ -184,13 +130,7 @@
     if (state.mode === "C") listCard.append(heading, count);
     else listCard.append(heading, count, list);
 
-    var details = document.createElement("details");
-    details.className = "card";
-    var summary = document.createElement("summary");
-    summary.textContent = "拼音表";
-    details.append(summary, renderTables(data));
-
-    root.append(tools, panel, listCard, details);
+    root.append(tools, panel, listCard);
   }
 
   function loadWords() {
@@ -254,7 +194,9 @@
   }
 
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").catch(function () {});
+    navigator.serviceWorker.register("sw.js").then(function (registration) {
+      if (registration && registration.update) registration.update();
+    }).catch(function () {});
   }
 
   boot();

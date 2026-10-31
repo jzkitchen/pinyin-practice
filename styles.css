@@ -300,13 +300,56 @@ button:disabled {
   background: var(--card);
 }
 
-.listen-row {
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+button.slot {
+  background: var(--soft);
+  color: var(--ink);
+  min-width: 72px;
+  min-height: 72px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+button.slot:hover { background: #d5e8f4; color: var(--ink); }
+
+button.slot.current,
+button.slot[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 3px var(--accent-deep);
+}
+
+.slot-han { font-size: 1.5rem; font-weight: 750; line-height: 1.1; }
+
+.slot-py { font-size: 0.95rem; color: var(--accent-deep); }
+
+.listen-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.listen-option {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 8px 0 12px;
+}
+
+.listen-option-label {
+  font-weight: 750;
 }
 
 .reveal-py {

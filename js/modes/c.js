@@ -1,4 +1,4 @@
-/* 模式 C 組合拼音：聽詞語，再依每個字點聲母、韻母、聲調。
+/* 模式 C 組合拼音：聽整詞，每個字一格，一次送出整詞。
  * 作答前不顯示漢字。判定走模式 A／PinyinGrade，多音看 accept。
  * 瀏覽器不能朗讀時改為看字，並顯示說明。
  */
@@ -22,50 +22,10 @@
     no_speech: "這個瀏覽器不能朗讀。請改用支援中文語音的瀏覽器，或請旁邊的人讀出詞語。字詞會顯示出來，仍可練習。"
   };
 
-  var SPEECH_RATE_KEY = "pinyinSpeechRate";
-  var SPEECH_RATE_MIN = 0.1;
-  var SPEECH_RATE_MAX = 10;
-  var SPEECH_RATE_OPTIONS = [
-    { id: "slow", label: "慢", rate: 0.7 },
-    { id: "normal", label: "正常", rate: 1 },
-    { id: "fast", label: "快", rate: 1.3 }
-  ];
-
-  function speechRateOption(id) {
-    var i;
-    for (i = 0; i < SPEECH_RATE_OPTIONS.length; i++) {
-      if (SPEECH_RATE_OPTIONS[i].id === id) return SPEECH_RATE_OPTIONS[i];
-    }
-    return null;
-  }
-
-  function clampSpeechRate(rate) {
-    var n = Number(rate);
-    if (!isFinite(n)) return 1;
-    if (n < SPEECH_RATE_MIN) return SPEECH_RATE_MIN;
-    if (n > SPEECH_RATE_MAX) return SPEECH_RATE_MAX;
-    return n;
-  }
-
-  function readSpeechRateId(storage) {
-    try {
-      if (!storage || typeof storage.getItem !== "function") return "normal";
-      var raw = storage.getItem(SPEECH_RATE_KEY);
-      if (speechRateOption(raw)) return raw;
-    } catch (err) {}
-    return "normal";
-  }
-
-  function readSpeechRate(storage) {
-    return clampSpeechRate(speechRateOption(readSpeechRateId(storage)).rate);
-  }
-
-  function writeSpeechRateId(storage, id) {
-    var chosen = speechRateOption(id) ? id : "normal";
-    try {
-      if (storage && typeof storage.setItem === "function") storage.setItem(SPEECH_RATE_KEY, chosen);
-    } catch (err) {}
-    return chosen;
+  function ttsApi() {
+    if (typeof PinyinTts !== "undefined" && PinyinTts && PinyinTts.readPrefs) return PinyinTts;
+    if (typeof require === "function") return require("../tts.js");
+    throw new Error("語音模組尚未載入");
   }
 
   function modeA() {
@@ -104,8 +64,12 @@
     return modeA().createRun(words, copy);
   }
 
-  function submit(run, choice) {
-    return modeA().submit(run, choice);
+  function submit(run, choices) {
+    var result = modeA().submit(run, choices);
+    if (result && !result.ok && result.hanzi) {
+      result.feedback = result.feedback + "（" + result.hanzi + "）";
+    }
+    return result;
   }
 
   function sessionRecord(run, extra) {
@@ -124,11 +88,6 @@
       n === "cmn-cn" || n.indexOf("cmn-cn-") === 0 || n.indexOf("cmn-hans-cn") === 0;
   }
 
-  function isZh(lang) {
-    var n = normLang(lang);
-    return n === "zh" || n.indexOf("zh-") === 0 || n.indexOf("cmn") === 0;
-  }
-
   function voiceList(synth) {
     try {
       var list = synth && synth.getVoices ? synth.getVoices() : [];
@@ -136,18 +95,6 @@
     } catch (err) {
       return [];
     }
-  }
-
-  function chooseVoice(synth) {
-    var voices = voiceList(synth);
-    var i;
-    for (i = 0; i < voices.length; i++) {
-      if (isZhCN(voices[i].lang)) return voices[i];
-    }
-    for (i = 0; i < voices.length; i++) {
-      if (isZh(voices[i].lang)) return voices[i];
-    }
-    return null;
   }
 
   function charsOf(text) {
@@ -172,9 +119,16 @@
     var speechFailed = false;
     var voiceSettled = false;
     var announcedKey = "";
-    var picked = { initial: null, final: null, tone: null, hasInitial: false };
+    var active = 0;
+    var slots = [];
+    var slotWord = null;
+    var Tts = ttsApi();
     var speechStore = storageOf();
-    var rateId = readSpeechRateId(speechStore);
+    var prefs0 = Tts.readPrefs(speechStore);
+    var rateId = prefs0.rateId;
+    var engineId = prefs0.engine;
+    var voiceId = prefs0.voice;
+    var speechNote = "";
 
     function synthOf() {
       if (ctx && Object.prototype.hasOwnProperty.call(ctx, "speechSynthesis")) return ctx.speechSynthesis;
@@ -196,17 +150,27 @@
       return null;
     }
 
-    function canSpeak() {
+    function canUseBuiltin() {
       var synth = synthOf();
       var Ctor = utteranceCtor();
       return !!(synth && Ctor && typeof synth.speak === "function");
     }
 
     function listening() {
-      return canSpeak() && !speechFailed;
+      if (speechFailed) return false;
+      if (engineId === "neural") return true;
+      return canUseBuiltin();
     }
 
-    function speak(text) {
+    function setSpeechNote(text) {
+      speechNote = text || "";
+      var node = document.getElementById("speech-status");
+      if (!node) return;
+      node.textContent = speechNote;
+      node.hidden = !speechNote;
+    }
+
+    function speakBuiltin(text) {
       var synth = synthOf();
       var Ctor = utteranceCtor();
       if (!synth || !Ctor || typeof synth.speak !== "function") return false;
@@ -218,9 +182,9 @@
       }
       utter.lang = "zh-CN";
       try {
-        utter.rate = clampSpeechRate(speechRateOption(rateId).rate);
+        utter.rate = Tts.clampSpeechRate(Tts.rateById(rateId));
       } catch (err) {}
-      var voice = chooseVoice(synth);
+      var voice = Tts.chooseBuiltinVoice(voiceList(synth), voiceId);
       if (voice) {
         try {
           utter.voice = voice;
@@ -238,6 +202,42 @@
       return true;
     }
 
+    function speak(word) {
+      Tts.cancel();
+      if (engineId === "neural") {
+        var phonemes = Tts.phonemesForReadings(word && word.readings);
+        var request = {
+          hanzi: word && word.hanzi,
+          voice: voiceId,
+          rate: Tts.rateById(rateId),
+          lengthScale: Tts.lengthScaleForRate(Tts.rateById(rateId)),
+          phonemes: phonemes,
+          onProgress: function (loaded, total, label) {
+            setSpeechNote(Tts.progressText(label, loaded, total));
+          },
+          onStatus: function (text) { setSpeechNote(text); }
+        };
+        if (!phonemes) {
+          setSpeechNote(Tts.neuralFallback);
+          return speakBuiltin(word && word.hanzi);
+        }
+        var run = ctx && typeof ctx.neuralSpeak === "function" ? ctx.neuralSpeak(request) : Tts.speakNeural(request);
+        Promise.resolve(run).then(function (ok) {
+          if (ok === false) return;
+          if (!ok) throw new Error("neural");
+          setSpeechNote("");
+        }).catch(function () {
+          setSpeechNote(Tts.neuralFallback);
+          if (!speakBuiltin(word && word.hanzi)) {
+            speechFailed = true;
+            draw();
+          }
+        });
+        return true;
+      }
+      return speakBuiltin(word && word.hanzi);
+    }
+
     function activeWord() {
       if (!run.words.length) return null;
       if (phase === "feedback" && last && last.wordDone) return run.words[run.index - 1] || null;
@@ -246,25 +246,26 @@
     }
 
     function announceCurrent() {
-      if (phase !== "pick" || speechFailed || !canSpeak()) return;
-      if (!words.length || !tables || run.syllable !== 0) return;
+      if (phase !== "pick" || speechFailed) return;
+      if (engineId !== "neural" && !canUseBuiltin()) return;
+      if (!words.length || !tables) return;
       var word = run.words[run.index];
       if (!word) return;
       var key = String(run.index);
       if (announcedKey === key) return;
       announcedKey = key;
-      if (!speak(word.hanzi)) speechFailed = true;
+      if (!speak(word)) speechFailed = true;
     }
 
     function hookVoices() {
       var synth = synthOf();
-      if (!synth || !canSpeak()) return;
+      if (!synth || !canUseBuiltin()) return;
       var onVoices = function () {
-        if (voiceSettled || speechFailed) return;
-        if (phase !== "pick" || run.syllable !== 0) return;
+        if (engineId === "neural" || voiceSettled || speechFailed) return;
+        if (phase !== "pick") return;
         var word = run.words[run.index];
         if (!word) return;
-        if (!speak(word.hanzi)) {
+        if (!speak(word)) {
           speechFailed = true;
           draw();
           return;
@@ -275,32 +276,37 @@
       else synth.onvoiceschanged = onVoices;
     }
 
+    function blankSlot() {
+      return { initial: null, final: null, tone: null, hasInitial: false };
+    }
+
+    function syncSlots(word) {
+      if (!word) return;
+      if (slotWord === word && slots.length === word.readings.length) return;
+      slotWord = word;
+      active = 0;
+      slots = [];
+      for (var i = 0; i < word.readings.length; i++) slots.push(blankSlot());
+    }
+
+    function activeSlot() {
+      return slots[active] || blankSlot();
+    }
+
+    function slotDone(slot) {
+      return !!(slot && slot.hasInitial && slot.final != null && slot.tone != null);
+    }
+
     function shown() {
       if (phase === "feedback" && last && last.wordDone) {
         var idx = Math.max(0, run.index - 1);
-        var answered = run.words[idx];
-        return {
-          word: answered,
-          syllable: answered.readings.length - 1,
-          progress: idx + 1
-        };
+        return { word: run.words[idx], progress: idx + 1 };
       }
-      if (phase === "feedback" && last) {
-        return {
-          word: run.words[run.index],
-          syllable: Math.max(0, run.syllable - 1),
-          progress: run.index + 1
-        };
-      }
-      return {
-        word: run.words[run.index],
-        syllable: run.syllable,
-        progress: run.index + 1
-      };
+      return { word: run.words[run.index], progress: run.index + 1 };
     }
 
     function readyToCheck() {
-      return picked.hasInitial && picked.final != null && picked.tone != null;
+      return slots.length > 0 && slots.every(slotDone);
     }
 
     function report() {
@@ -322,15 +328,49 @@
 
     function choose(part, value) {
       if (phase !== "pick") return;
+      var slot = slots[active];
+      if (!slot) return;
       if (part === "initial") {
-        picked.initial = value;
-        picked.hasInitial = true;
+        slot.initial = value;
+        slot.hasInitial = true;
       } else if (part === "final") {
-        picked.final = value;
+        slot.final = value;
       } else {
-        picked.tone = Number(value);
+        slot.tone = Number(value);
       }
       draw();
+    }
+
+    function slotSpell(slot) {
+      if (!slotDone(slot)) return "？";
+      return gradeApi().spellSyllable(slot.initial, slot.final, slot.tone);
+    }
+
+    function slotRow(word, showHanzi) {
+      var row = document.createElement("div");
+      row.className = "slots";
+      var chars = charsOf(word.hanzi);
+      chars.forEach(function (ch, index) {
+        var node = document.createElement("button");
+        node.type = "button";
+        node.className = "slot" + (index === active ? " current" : "");
+        node.setAttribute("data-slot", String(index));
+        node.setAttribute("aria-pressed", index === active ? "true" : "false");
+        var label = document.createElement("span");
+        label.className = "slot-han";
+        label.textContent = showHanzi ? ch : String(index + 1);
+        var py = document.createElement("span");
+        py.className = "slot-py";
+        py.textContent = slotSpell(slots[index]);
+        node.append(label, py);
+        node.addEventListener("click", function () {
+          if (phase !== "pick") return;
+          active = index;
+          draw();
+        });
+        row.appendChild(node);
+      });
+      return row;
     }
 
     function pickerBlock(titleText, part, items, current) {
@@ -366,7 +406,7 @@
         var row = document.createElement("div");
         row.className = "chips";
         yunmu.filter(function (item) { return item.group === group; }).forEach(function (item) {
-          var pressed = picked.final != null && picked.final === item.key;
+          var pressed = activeSlot().final != null && activeSlot().final === item.key;
           var node = button(item.label, "final", item.key, pressed);
           node.addEventListener("click", function () { choose("final", item.key); });
           row.appendChild(node);
@@ -379,7 +419,7 @@
     function toneBlock(shengdiao) {
       return pickerBlock("聲調", "tone", shengdiao.map(function (item) {
         return { label: item.label + " " + item.mark, value: String(item.tone) };
-      }), picked.tone == null ? null : String(picked.tone));
+      }), activeSlot().tone == null ? null : String(activeSlot().tone));
     }
 
     function hanziLine(word, syllable, markCurrent) {
@@ -403,32 +443,55 @@
       replay.disabled = !listening();
       replay.addEventListener("click", function () {
         if (!listening() || !word) return;
-        if (!speak(word.hanzi)) {
+        if (!speak(word)) {
           speechFailed = true;
           draw();
         }
       });
-      var rates = document.createElement("div");
-      rates.className = "chips rate-controls";
-      rates.setAttribute("role", "group");
-      rates.setAttribute("aria-label", "朗讀速度");
-      SPEECH_RATE_OPTIONS.forEach(function (item) {
-        var node = document.createElement("button");
-        node.type = "button";
-        node.className = "pick";
-        node.setAttribute("data-rate", item.id);
-        node.setAttribute("aria-pressed", item.id === rateId ? "true" : "false");
-        node.textContent = item.label;
-        node.addEventListener("click", function () {
-          rateId = writeSpeechRateId(speechStore, item.id);
-          draw();
+      function optionGroup(label, options, current, field) {
+        var wrap = document.createElement("div");
+        wrap.className = "listen-option";
+        var name = document.createElement("span");
+        name.className = "listen-option-label";
+        name.textContent = label;
+        var chips = document.createElement("div");
+        chips.className = "chips";
+        chips.setAttribute("role", "group");
+        chips.setAttribute("aria-label", label);
+        options.forEach(function (item) {
+          var node = document.createElement("button");
+          node.type = "button";
+          node.className = "pick";
+          node.setAttribute("data-tts", field);
+          node.setAttribute("data-value", item.id);
+          node.setAttribute("aria-pressed", item.id === current ? "true" : "false");
+          node.textContent = item.label;
+          node.addEventListener("click", function () {
+            if (field === "rate") rateId = Tts.writePref(speechStore, "rate", item.id);
+            else if (field === "engine") engineId = Tts.writePref(speechStore, "engine", item.id);
+            else voiceId = Tts.writePref(speechStore, "voice", item.id);
+            draw();
+          });
+          chips.appendChild(node);
         });
-        rates.appendChild(node);
-      });
-      var row = document.createElement("div");
-      row.className = "listen-row";
-      row.append(replay, rates);
-      return row;
+        wrap.append(name, chips);
+        return wrap;
+      }
+      var note = document.createElement("p");
+      note.id = "speech-status";
+      note.className = "hint";
+      note.textContent = speechNote;
+      note.hidden = !speechNote;
+      var panel = document.createElement("div");
+      panel.className = "listen-panel";
+      panel.append(
+        replay,
+        optionGroup("引擎", Tts.engines, engineId, "engine"),
+        optionGroup("聲線", Tts.voices, voiceId, "voice"),
+        optionGroup("語速", Tts.speechRateOptions, rateId, "rate"),
+        note
+      );
+      return panel;
     }
 
     function draw() {
@@ -468,15 +531,13 @@
 
       var view = shown();
       var word = view.word;
+      if (phase === "pick") syncSlots(word);
       var hear = listening();
       var revealWord = phase === "feedback" && last && last.wordDone;
       var showHanzi = !hear || revealWord;
       var prompt = document.createElement("p");
       prompt.className = "prompt";
       prompt.textContent = hear ? textOf(copy, "prompt") : textOf(copy, "prompt_fallback");
-      var step = document.createElement("p");
-      step.className = "syllable";
-      step.textContent = syllableLine(copy, view.syllable + 1);
       var progress = document.createElement("p");
       progress.className = "hint";
       progress.textContent = "第 " + view.progress + " 題，共 " + run.total + " 題";
@@ -494,14 +555,15 @@
         rootEl.appendChild(quiet);
       }
       rootEl.appendChild(prompt);
-      if (showHanzi) rootEl.appendChild(hanziLine(word, view.syllable, !revealWord));
+      if (showHanzi) rootEl.appendChild(hanziLine(word, active, phase === "pick"));
+      if (phase === "pick") rootEl.appendChild(slotRow(word, showHanzi));
       if (revealWord) {
         var py = document.createElement("p");
         py.className = "reveal-py";
         py.textContent = spacedPinyin(word);
         rootEl.appendChild(py);
       }
-      rootEl.append(step, progress, replayButton(activeWord() || word));
+      rootEl.append(progress, replayButton(activeWord() || word));
 
       if (phase === "feedback" && last) {
         var feedback = document.createElement("p");
@@ -515,7 +577,6 @@
         next.addEventListener("click", function () {
           if (run.done) phase = "done";
           else phase = "pick";
-          picked = { initial: null, final: null, tone: null, hasInitial: false };
           draw();
         });
         var actions = document.createElement("div");
@@ -525,10 +586,11 @@
         return;
       }
 
+      var current = activeSlot();
       rootEl.append(
         pickerBlock("聲母", "initial", tables.shengmu.map(function (item) {
           return { label: item.label, value: item.key };
-        }), picked.hasInitial ? picked.initial : null),
+        }), current.hasInitial ? current.initial : null),
         pickerGroups(tables.yunmu),
         toneBlock(tables.shengdiao)
       );
@@ -540,11 +602,9 @@
       check.disabled = !readyToCheck();
       check.addEventListener("click", function () {
         if (!readyToCheck()) return;
-        last = submit(run, {
-          initial: picked.initial,
-          final: picked.final,
-          tone: picked.tone
-        });
+        last = submit(run, slots.map(function (slot) {
+          return { initial: slot.initial, final: slot.final, tone: slot.tone };
+        }));
         phase = "feedback";
         draw();
         var node = document.getElementById("answer-feedback");
@@ -569,11 +629,11 @@
     createRun: createRun,
     submit: submit,
     sessionRecord: sessionRecord,
-    speechRateKey: SPEECH_RATE_KEY,
-    speechRateOptions: SPEECH_RATE_OPTIONS,
-    clampSpeechRate: clampSpeechRate,
-    readSpeechRateId: readSpeechRateId,
-    readSpeechRate: readSpeechRate,
-    writeSpeechRateId: writeSpeechRateId
+    speechRateKey: ttsApi().speechRateKey,
+    speechRateOptions: ttsApi().speechRateOptions,
+    clampSpeechRate: function (rate) { return ttsApi().clampSpeechRate(rate); },
+    readSpeechRateId: function (storage) { return ttsApi().readSpeechRateId(storage); },
+    readSpeechRate: function (storage) { return ttsApi().readSpeechRate(storage); },
+    writeSpeechRateId: function (storage, id) { return ttsApi().writePref(storage, "rate", id); }
   };
 });
