@@ -32,7 +32,7 @@
 
   var ENGINES = [
     { id: "builtin", label: "系統內建" },
-    { id: "neural", label: "神經模型（首次約 63MB×聲線）" }
+    { id: "neural", label: "神經模型" }
   ];
 
   var VOICES = [

@@ -1021,7 +1021,6 @@
   "ui_copy": {
     "shengmu_title": "聲母",
     "yunmu_title": "韻母",
-    "yunmu_note": "拼法參考《漢語拼音方案》",
     "column_titles": {
       "open": "開口",
       "i": "齊齒",
@@ -1029,8 +1028,7 @@
       "ü": "撮口"
     },
     "shengdiao_title": "聲調",
-    "empty_shengmu_hint": "這個音不用選聲母",
-    "abbrev_hint": "書本寫 iou、uei、uen；前面有聲母時寫成 iu、ui、un。"
+    "empty_shengmu_hint": "這個音不用選聲母"
   },
   "normalize_rules": [
     "lowercase_trim",

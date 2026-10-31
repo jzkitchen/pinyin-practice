@@ -48,7 +48,10 @@ assert.deepStrictEqual(shownShengmu, book.shengmu.map(function (item) { return i
 });
 assert.deepStrictEqual(view.shengmuGroups.map(function (group) { return group.items.length; }), [4, 4, 3, 3, 4, 3]);
 assert.strictEqual(view.emptyHint, "這個音不用選聲母");
-assert.strictEqual(view.abbrevHint, "書本寫 iou、uei、uen；前面有聲母時寫成 iu、ui、un。");
+assert.strictEqual(view.yunmuNote, "");
+assert.strictEqual(view.abbrevHint, "");
+assert.ok(!Object.prototype.hasOwnProperty.call(book.ui_copy, "yunmu_note"));
+assert.ok(!Object.prototype.hasOwnProperty.call(book.ui_copy, "abbrev_hint"));
 assert.deepStrictEqual(view.columns.map(function (col) { return col.title; }), ["開口", "齊齒", "合口", "撮口"]);
 assert.deepStrictEqual(view.columns.map(function (col) { return col.items.length; }), [12, 10, 9, 4]);
 var labels = [];

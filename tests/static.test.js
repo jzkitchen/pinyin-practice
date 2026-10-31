@@ -204,12 +204,21 @@ function walk(dir) {
 }
 walk(root);
 
-assert.ok(read("sw.js").indexOf('var VERSION = "v10"') > 0);
+assert.ok(read("sw.js").indexOf('var VERSION = "v11"') > 0);
+assert.ok(read("styles.css").indexOf("grid-template-columns: 1fr 1fr") < 0);
+assert.ok(read("styles.css").indexOf(".shengmu-groups button.pick") > 0);
+assert.ok(read("styles.css").indexOf("border-radius: 50%") > 0);
+assert.ok(read("js/modes/a.js").indexOf("practice-progress") > 0);
+assert.ok(read("js/modes/c.js").indexOf("practice-progress") > 0);
+assert.ok(read("js/tts.js").indexOf("神經模型（首次約 63MB×聲線）") < 0);
+assert.ok(read("data/book_pinyin_table_v1.json").indexOf("拼法參考") < 0);
+assert.ok(read("data/book_pinyin_table_v1.json").indexOf("書本寫") < 0);
+assert.ok(read("styles.css").indexOf(".han { font-size: 1.2rem;") > 0);
 assert.ok(read("sw.js").indexOf("function networkFirst") > 0);
 assert.ok(read("js/app.js").indexOf("拼音表") < 0);
 assert.ok(read("js/app.js").indexOf("registration.update") > 0);
-assert.ok(read("README.md").indexOf("`v10`") > 0);
-assert.ok(read("TECH.md").indexOf("`v10`") > 0);
+assert.ok(read("README.md").indexOf("`v11`") > 0);
+assert.ok(read("TECH.md").indexOf("`v11`") > 0);
 assert.ok(read("sw.js").indexOf("data/book_pinyin_table_v1.json") > 0);
 assert.ok(read("sw.js").indexOf("js/syllable-picker.js") > 0);
 assert.ok(read("scripts/export-pages.js").indexOf("data/book_pinyin_table_v1.json") > 0);

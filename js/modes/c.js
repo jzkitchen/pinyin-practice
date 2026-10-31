@@ -520,7 +520,7 @@
       prompt.className = "prompt";
       prompt.textContent = hear ? textOf(copy, "prompt") : textOf(copy, "prompt_fallback");
       var progress = document.createElement("p");
-      progress.className = "hint";
+      progress.className = "hint practice-progress";
       progress.textContent = "第 " + view.progress + " 題，共 " + run.total + " 題";
 
       if (phase === "pick" && hear) {

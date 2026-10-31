@@ -48,4 +48,4 @@ Firestore（與本機形狀相同）：
 
 ## 快取
 
-`sw.js` 的 `VERSION` 目前是 `v10`。頁面、腳本和樣式改為網路優先，離線才用快取；啟動時會 `skipWaiting`、`clients.claim`，並刪掉舊的 `pinyin-practice-*` 快取。練習頁載入時會呼叫 `registration.update()`。換檔後仍要加大版本號。一般重新整理就會拿到新檔，不必先清網站資料。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。
+`sw.js` 的 `VERSION` 目前是 `v11`。頁面、腳本和樣式改為網路優先，離線才用快取；啟動時會 `skipWaiting`、`clients.claim`，並刪掉舊的 `pinyin-practice-*` 快取。練習頁載入時會呼叫 `registration.update()`。換檔後仍要加大版本號。一般重新整理就會拿到新檔，不必先清網站資料。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。

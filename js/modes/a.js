@@ -323,7 +323,7 @@
         han.appendChild(span);
       });
       var progress = document.createElement("p");
-      progress.className = "hint";
+      progress.className = "hint practice-progress";
       progress.textContent = "第 " + view.progress + " 題，共 " + run.total + " 題";
       if (phase === "feedback") root.append(prompt, han, progress);
       else root.append(before, prompt, han, slotRow(word), progress);
