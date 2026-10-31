@@ -302,7 +302,10 @@ button:disabled {
 
 .listen-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
+  gap: 8px;
   margin: 8px 0 12px;
 }
 

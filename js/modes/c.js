@@ -22,6 +22,52 @@
     no_speech: "這個瀏覽器不能朗讀。請改用支援中文語音的瀏覽器，或請旁邊的人讀出詞語。字詞會顯示出來，仍可練習。"
   };
 
+  var SPEECH_RATE_KEY = "pinyinSpeechRate";
+  var SPEECH_RATE_MIN = 0.1;
+  var SPEECH_RATE_MAX = 10;
+  var SPEECH_RATE_OPTIONS = [
+    { id: "slow", label: "慢", rate: 0.7 },
+    { id: "normal", label: "正常", rate: 1 },
+    { id: "fast", label: "快", rate: 1.3 }
+  ];
+
+  function speechRateOption(id) {
+    var i;
+    for (i = 0; i < SPEECH_RATE_OPTIONS.length; i++) {
+      if (SPEECH_RATE_OPTIONS[i].id === id) return SPEECH_RATE_OPTIONS[i];
+    }
+    return null;
+  }
+
+  function clampSpeechRate(rate) {
+    var n = Number(rate);
+    if (!isFinite(n)) return 1;
+    if (n < SPEECH_RATE_MIN) return SPEECH_RATE_MIN;
+    if (n > SPEECH_RATE_MAX) return SPEECH_RATE_MAX;
+    return n;
+  }
+
+  function readSpeechRateId(storage) {
+    try {
+      if (!storage || typeof storage.getItem !== "function") return "normal";
+      var raw = storage.getItem(SPEECH_RATE_KEY);
+      if (speechRateOption(raw)) return raw;
+    } catch (err) {}
+    return "normal";
+  }
+
+  function readSpeechRate(storage) {
+    return clampSpeechRate(speechRateOption(readSpeechRateId(storage)).rate);
+  }
+
+  function writeSpeechRateId(storage, id) {
+    var chosen = speechRateOption(id) ? id : "normal";
+    try {
+      if (storage && typeof storage.setItem === "function") storage.setItem(SPEECH_RATE_KEY, chosen);
+    } catch (err) {}
+    return chosen;
+  }
+
   function modeA() {
     if (typeof ModeA !== "undefined" && ModeA && typeof ModeA.gradeSyllable === "function") return ModeA;
     if (typeof require === "function") return require("./a.js");
@@ -127,10 +173,20 @@
     var voiceSettled = false;
     var announcedKey = "";
     var picked = { initial: null, final: null, tone: null, hasInitial: false };
+    var speechStore = storageOf();
+    var rateId = readSpeechRateId(speechStore);
 
     function synthOf() {
       if (ctx && Object.prototype.hasOwnProperty.call(ctx, "speechSynthesis")) return ctx.speechSynthesis;
       if (typeof window !== "undefined" && window.speechSynthesis) return window.speechSynthesis;
+      return null;
+    }
+
+    function storageOf() {
+      if (ctx && Object.prototype.hasOwnProperty.call(ctx, "storage")) return ctx.storage;
+      try {
+        if (typeof localStorage !== "undefined") return localStorage;
+      } catch (err) {}
       return null;
     }
 
@@ -161,6 +217,9 @@
         return false;
       }
       utter.lang = "zh-CN";
+      try {
+        utter.rate = clampSpeechRate(speechRateOption(rateId).rate);
+      } catch (err) {}
       var voice = chooseVoice(synth);
       if (voice) {
         try {
@@ -349,9 +408,26 @@
           draw();
         }
       });
+      var rates = document.createElement("div");
+      rates.className = "chips rate-controls";
+      rates.setAttribute("role", "group");
+      rates.setAttribute("aria-label", "朗讀速度");
+      SPEECH_RATE_OPTIONS.forEach(function (item) {
+        var node = document.createElement("button");
+        node.type = "button";
+        node.className = "pick";
+        node.setAttribute("data-rate", item.id);
+        node.setAttribute("aria-pressed", item.id === rateId ? "true" : "false");
+        node.textContent = item.label;
+        node.addEventListener("click", function () {
+          rateId = writeSpeechRateId(speechStore, item.id);
+          draw();
+        });
+        rates.appendChild(node);
+      });
       var row = document.createElement("div");
       row.className = "listen-row";
-      row.appendChild(replay);
+      row.append(replay, rates);
       return row;
     }
 
@@ -492,6 +568,12 @@
     gradeSyllable: gradeSyllable,
     createRun: createRun,
     submit: submit,
-    sessionRecord: sessionRecord
+    sessionRecord: sessionRecord,
+    speechRateKey: SPEECH_RATE_KEY,
+    speechRateOptions: SPEECH_RATE_OPTIONS,
+    clampSpeechRate: clampSpeechRate,
+    readSpeechRateId: readSpeechRateId,
+    readSpeechRate: readSpeechRate,
+    writeSpeechRateId: writeSpeechRateId
   };
 });

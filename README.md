@@ -107,13 +107,14 @@ node scripts/seed-firestore.js --print
 
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v6`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
+`sw.js` 的 `VERSION` 目前是 `v7`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
 
 ## 聽讀（模式 C）
 
 模式 C 用瀏覽器的 `speechSynthesis`，語句語言固定為 `zh-CN`。聲線清單裡若有普通話（`zh-CN`，或標成 `cmn-Hans-CN`）會優先用它；否則才退到其他中文聲線。沒有中文聲線時不改掛英文聲線，仍以 `zh-CN` 請瀏覽器朗讀。重播讀的是整詞，不是單字。
 
 - 有的瀏覽器要使用者先按一下才出聲（尤其 iPhone／iPad 的 Safari）。畫面有「再聽一次」。
+- 朗讀速度是「慢」「正常」「快」，對應 `SpeechSynthesisUtterance.rate` 的 `0.7`、`1.0`、`1.3`（超出時夾在 API 常見範圍 0.1–10）。預設「正常」。選擇寫在這個瀏覽器的 `localStorage`，鍵名 `pinyinSpeechRate`。自動朗讀和「再聽一次」都用這個速度。有的聲線或瀏覽器會忽略 `rate`。
 - 聲線清單可能晚一點才到。第一次若還沒有普通話聲線，`voiceschanged` 之後會再讀一次。
 - 多音字讀哪一個音由語音引擎決定，可能和詞義不一致。判定仍只看該詞的 `accept`。
 - 很長的句子有時會被瀏覽器中途暫停。這裡每次只讀一個詞。

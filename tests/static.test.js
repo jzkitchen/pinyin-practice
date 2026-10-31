@@ -198,9 +198,9 @@ function walk(dir) {
 }
 walk(root);
 
-assert.ok(read("sw.js").indexOf('var VERSION = "v6"') > 0);
-assert.ok(read("README.md").indexOf("`v6`") > 0);
-assert.ok(read("TECH.md").indexOf("`v6`") > 0);
+assert.ok(read("sw.js").indexOf('var VERSION = "v7"') > 0);
+assert.ok(read("README.md").indexOf("`v7`") > 0);
+assert.ok(read("TECH.md").indexOf("`v7`") > 0);
 assert.ok(read("js/admin.js").indexOf("點選拼音（模式 A）、認讀選擇（模式 B）與組合拼音（模式 C）皆可練習。") > 0);
 assert.ok(read("js/admin.js").indexOf("尚未開放") < 0);
 assert.ok(read("js/admin.js").indexOf("認讀選擇和組合拼音尚未開放") < 0);

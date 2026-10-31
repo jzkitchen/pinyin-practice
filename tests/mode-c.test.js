@@ -94,6 +94,51 @@ assert.strictEqual(record.setId, "set_demo");
 assert.strictEqual(record.total, 2);
 assert.strictEqual(record.correct, 1);
 
+function memoryStorage(initial) {
+  var data = {};
+  var key;
+  initial = initial || {};
+  for (key in initial) {
+    if (Object.prototype.hasOwnProperty.call(initial, key)) data[key] = initial[key];
+  }
+  return {
+    getItem: function (name) {
+      return Object.prototype.hasOwnProperty.call(data, name) ? data[name] : null;
+    },
+    setItem: function (name, value) {
+      data[name] = String(value);
+    }
+  };
+}
+
+assert.strictEqual(ModeC.speechRateKey, "pinyinSpeechRate");
+assert.deepStrictEqual(ModeC.speechRateOptions.map(function (item) {
+  return item.label + ":" + item.rate;
+}), ["慢:0.7", "正常:1", "快:1.3"]);
+assert.strictEqual(ModeC.readSpeechRateId(null), "normal");
+assert.strictEqual(ModeC.readSpeechRate(null), 1);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage()), 1);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage({ pinyinSpeechRate: "slow" })), 0.7);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage({ pinyinSpeechRate: "normal" })), 1);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage({ pinyinSpeechRate: "fast" })), 1.3);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage({ pinyinSpeechRate: "nope" })), 1);
+assert.strictEqual(ModeC.readSpeechRate({ getItem: function () { throw new Error("denied"); } }), 1);
+assert.strictEqual(ModeC.clampSpeechRate(0.7), 0.7);
+assert.strictEqual(ModeC.clampSpeechRate(0), 0.1);
+assert.strictEqual(ModeC.clampSpeechRate(99), 10);
+assert.strictEqual(ModeC.clampSpeechRate("fast"), 1);
+var saved = memoryStorage();
+assert.strictEqual(ModeC.writeSpeechRateId(saved, "slow"), "slow");
+assert.strictEqual(saved.getItem("pinyinSpeechRate"), "slow");
+assert.strictEqual(ModeC.readSpeechRate(saved), 0.7);
+assert.strictEqual(ModeC.writeSpeechRateId(saved, "bogus"), "normal");
+assert.strictEqual(saved.getItem("pinyinSpeechRate"), "normal");
+var locked = {
+  getItem: function () { return "fast"; },
+  setItem: function () { throw new Error("denied"); }
+};
+assert.strictEqual(ModeC.writeSpeechRateId(locked, "slow"), "slow");
+
 function createDocument() {
   var byId = {};
   function Element(tag) {
@@ -234,6 +279,10 @@ assert.strictEqual(zhSynth.spoken.length, 1);
 assert.strictEqual(zhSynth.spoken[0].text, "媽媽");
 assert.strictEqual(zhSynth.spoken[0].lang, "zh-CN");
 assert.strictEqual(zhSynth.spoken[0].voice.name, "Tingting");
+assert.strictEqual(zhSynth.spoken[0].rate, 1, "預設語速是正常");
+assert.strictEqual(findButton(heard.root, "慢").getAttribute("aria-pressed"), "false");
+assert.strictEqual(findButton(heard.root, "正常").getAttribute("aria-pressed"), "true");
+assert.strictEqual(findButton(heard.root, "快").getAttribute("aria-pressed"), "false");
 assert.ok(findButton(heard.root, "確定").disabled, "未選齊不能送出");
 findPick(heard.root, "initial", "m").click();
 assert.strictEqual(zhSynth.spoken.length, 1, "點選時不重複朗讀");
@@ -330,5 +379,54 @@ broken.speak = function () { throw new Error("speech failed"); };
 var failed = mountWith([mama], broken);
 assert.ok(textOf(failed.root).indexOf(copy.no_speech) >= 0);
 assert.ok(textOf(failed.root).indexOf("媽媽") >= 0);
+
+var slowStore = memoryStorage({ pinyinSpeechRate: "slow" });
+var slowSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
+var slowMount = mountWith([mama, shui], slowSynth, { storage: slowStore });
+assert.strictEqual(slowSynth.spoken[0].text, "媽媽");
+assert.strictEqual(slowSynth.spoken[0].rate, 0.7);
+assert.strictEqual(findButton(slowMount.root, "慢").getAttribute("aria-pressed"), "true");
+assert.strictEqual(findButton(slowMount.root, "正常").getAttribute("aria-pressed"), "false");
+findButton(slowMount.root, "快").click();
+assert.strictEqual(slowStore.getItem("pinyinSpeechRate"), "fast");
+assert.strictEqual(findButton(slowMount.root, "快").getAttribute("aria-pressed"), "true");
+assert.strictEqual(slowSynth.spoken.length, 1, "改語速本身不重播");
+var beforeFast = slowSynth.spoken.length;
+findButton(slowMount.root, "再聽一次").click();
+assert.strictEqual(slowSynth.spoken.length, beforeFast + 1);
+assert.strictEqual(slowSynth.spoken[beforeFast].text, "媽媽");
+assert.strictEqual(slowSynth.spoken[beforeFast].rate, 1.3);
+findPick(slowMount.root, "initial", "m").click();
+findPick(slowMount.root, "final", "a").click();
+findPick(slowMount.root, "tone", "1").click();
+findButton(slowMount.root, "確定").click();
+findButton(slowMount.root, "繼續").click();
+findPick(slowMount.root, "initial", "m").click();
+findPick(slowMount.root, "final", "a").click();
+findPick(slowMount.root, "tone", "0").click();
+findButton(slowMount.root, "確定").click();
+findButton(slowMount.root, "繼續").click();
+assert.strictEqual(slowSynth.spoken[slowSynth.spoken.length - 1].text, "水");
+assert.strictEqual(slowSynth.spoken[slowSynth.spoken.length - 1].rate, 1.3);
+
+var denied = {
+  getItem: function () { throw new Error("denied"); },
+  setItem: function () { throw new Error("denied"); }
+};
+var deniedSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
+var deniedMount = mountWith([shui], deniedSynth, { storage: denied });
+assert.strictEqual(deniedSynth.spoken[0].rate, 1);
+findButton(deniedMount.root, "慢").click();
+findButton(deniedMount.root, "再聽一次").click();
+assert.strictEqual(deniedSynth.spoken[deniedSynth.spoken.length - 1].rate, 0.7);
+assert.strictEqual(deniedSynth.spoken[deniedSynth.spoken.length - 1].lang, "zh-CN");
+
+var lateRate = createSynth([]);
+mountWith([shui], lateRate, { storage: memoryStorage({ pinyinSpeechRate: "fast" }) });
+assert.strictEqual(lateRate.spoken[0].rate, 1.3);
+lateRate.voices = [{ lang: "zh-CN", name: "Tingting" }];
+lateRate.listeners.voiceschanged();
+assert.strictEqual(lateRate.spoken[1].rate, 1.3);
+assert.strictEqual(lateRate.spoken[1].voice.name, "Tingting");
 
 console.log("mode C tests passed");

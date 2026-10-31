@@ -4,7 +4,7 @@
 
 ## 頁面
 
-- `index.html` 練習頁。載入拼音 JSON。模式 A 是看字點選拼音。模式 B 看帶調拼音，輸入繁體字詞；作答前不顯示漢字，答錯立刻顯示正確的字和拼音。模式 C 用 `speechSynthesis`（`zh-CN`）朗讀詞語，再點聲母、韻母、聲調；作答前不顯示漢字。沒有朗讀時改為看字，並顯示說明。練習頁不登入。
+- `index.html` 練習頁。載入拼音 JSON。模式 A 是看字點選拼音。模式 B 看帶調拼音，輸入繁體字詞；作答前不顯示漢字，答錯立刻顯示正確的字和拼音。模式 C 用 `speechSynthesis`（`zh-CN`）朗讀詞語，再點聲母、韻母、聲調；作答前不顯示漢字。速度是慢、正常、快（`rate` 0.7 / 1.0 / 1.3），存在 `localStorage` 的 `pinyinSpeechRate`。沒有朗讀時改為看字，並顯示說明。練習頁不登入。
 - `admin.html` 家長頁。`signInWithEmailAndPassword(APP_CONFIG.parentEmail, 輸入的密碼)`。帳號是 `parent@pinyin-practice.local`。通過後 Firebase Auth 自己記住登入狀態。詞組和字詞的新增、修改、刪除走 `js/cloud.js`。練習紀錄只有這位家長讀得到；未登入不會向 Firestore 列出 `sessions`。更改密碼會先用目前密碼 `reauthenticateWithCredential`，再 `updatePassword`。
 
 ## 資料
@@ -48,4 +48,4 @@ Firestore（與本機形狀相同）：
 
 ## 快取
 
-`sw.js` 的 `VERSION` 目前是 `v6`。導覽先走網路，其餘靜態檔先用快取。換檔後要加大版本號。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。
+`sw.js` 的 `VERSION` 目前是 `v7`。導覽先走網路，其餘靜態檔先用快取。換檔後要加大版本號。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。
