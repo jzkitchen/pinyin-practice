@@ -74,15 +74,15 @@ data.seed_words.forEach(function (seed) {
 });
 
 var run = ModeC.createRun([mama, shui], copy);
-var first = ModeC.submit(run, { initial: "m", final: "a", tone: 4 });
+var first = ModeC.submit(run, [
+  { initial: "m", final: "a", tone: 4 },
+  { initial: "m", final: "a", tone: 0 }
+]);
 assert.strictEqual(first.ok, false);
-assert.strictEqual(first.wordDone, false);
-assert.strictEqual(first.feedback, "不對。正確是：mā");
-var second = ModeC.submit(run, { initial: "m", final: "a", tone: 0 });
-assert.strictEqual(second.wordDone, true);
-assert.strictEqual(second.allCorrect, false);
+assert.strictEqual(first.wordDone, true);
+assert.strictEqual(first.feedback, "不對。正確是：mā ma（媽媽）");
 assert.strictEqual(run.correctWords, 0);
-var third = ModeC.submit(run, { initial: "sh", final: "ui", tone: 3 });
+var third = ModeC.submit(run, [{ initial: "sh", final: "ui", tone: 3 }]);
 assert.strictEqual(third.ok, true);
 assert.strictEqual(third.allCorrect, true);
 assert.strictEqual(third.setDone, true);
@@ -93,6 +93,51 @@ assert.strictEqual(record.mode, "C");
 assert.strictEqual(record.setId, "set_demo");
 assert.strictEqual(record.total, 2);
 assert.strictEqual(record.correct, 1);
+
+function memoryStorage(initial) {
+  var data = {};
+  var key;
+  initial = initial || {};
+  for (key in initial) {
+    if (Object.prototype.hasOwnProperty.call(initial, key)) data[key] = initial[key];
+  }
+  return {
+    getItem: function (name) {
+      return Object.prototype.hasOwnProperty.call(data, name) ? data[name] : null;
+    },
+    setItem: function (name, value) {
+      data[name] = String(value);
+    }
+  };
+}
+
+assert.strictEqual(ModeC.speechRateKey, "pinyinSpeechRate");
+assert.deepStrictEqual(ModeC.speechRateOptions.map(function (item) {
+  return item.label + ":" + item.rate;
+}), ["慢:0.7", "正常:1", "快:1.3"]);
+assert.strictEqual(ModeC.readSpeechRateId(null), "normal");
+assert.strictEqual(ModeC.readSpeechRate(null), 1);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage()), 1);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage({ pinyinSpeechRate: "slow" })), 0.7);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage({ pinyinSpeechRate: "normal" })), 1);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage({ pinyinSpeechRate: "fast" })), 1.3);
+assert.strictEqual(ModeC.readSpeechRate(memoryStorage({ pinyinSpeechRate: "nope" })), 1);
+assert.strictEqual(ModeC.readSpeechRate({ getItem: function () { throw new Error("denied"); } }), 1);
+assert.strictEqual(ModeC.clampSpeechRate(0.7), 0.7);
+assert.strictEqual(ModeC.clampSpeechRate(0), 0.1);
+assert.strictEqual(ModeC.clampSpeechRate(99), 10);
+assert.strictEqual(ModeC.clampSpeechRate("fast"), 1);
+var saved = memoryStorage();
+assert.strictEqual(ModeC.writeSpeechRateId(saved, "slow"), "slow");
+assert.strictEqual(saved.getItem("pinyinSpeechRate"), "slow");
+assert.strictEqual(ModeC.readSpeechRate(saved), 0.7);
+assert.strictEqual(ModeC.writeSpeechRateId(saved, "bogus"), "normal");
+assert.strictEqual(saved.getItem("pinyinSpeechRate"), "normal");
+var locked = {
+  getItem: function () { return "fast"; },
+  setItem: function () { throw new Error("denied"); }
+};
+assert.strictEqual(ModeC.writeSpeechRateId(locked, "slow"), "slow");
 
 function createDocument() {
   var byId = {};
@@ -170,6 +215,21 @@ function findButton(root, label) {
   return found;
 }
 
+function findSlot(root, index) {
+  var found = null;
+  walk(root, function (node) {
+    if (node.tagName === "BUTTON" && node.getAttribute("data-slot") === String(index)) found = node;
+  });
+  return found;
+}
+
+function fillSlot(root, index, initial, final, tone) {
+  findSlot(root, index).click();
+  findPick(root, "initial", initial).click();
+  findPick(root, "final", final).click();
+  findPick(root, "tone", tone).click();
+}
+
 function findPick(root, part, value) {
   var found = null;
   walk(root, function (node) {
@@ -234,15 +294,28 @@ assert.strictEqual(zhSynth.spoken.length, 1);
 assert.strictEqual(zhSynth.spoken[0].text, "媽媽");
 assert.strictEqual(zhSynth.spoken[0].lang, "zh-CN");
 assert.strictEqual(zhSynth.spoken[0].voice.name, "Tingting");
+assert.strictEqual(zhSynth.spoken[0].rate, 1, "預設語速是正常");
+assert.strictEqual(findButton(heard.root, "慢").getAttribute("aria-pressed"), "false");
+assert.strictEqual(findButton(heard.root, "正常").getAttribute("aria-pressed"), "true");
+assert.strictEqual(findButton(heard.root, "快").getAttribute("aria-pressed"), "false");
+assert.strictEqual(findButton(heard.root, "系統內建").getAttribute("aria-pressed"), "true");
+assert.strictEqual(findButton(heard.root, "神經模型（首次約 63MB×聲線）").getAttribute("aria-pressed"), "false");
+assert.strictEqual(findButton(heard.root, "女聲").getAttribute("aria-pressed"), "true");
+assert.strictEqual(findButton(heard.root, "男聲").getAttribute("aria-pressed"), "false");
+assert.ok(findSlot(heard.root, 0), "兩個字要同時看到格子");
+assert.ok(findSlot(heard.root, 1));
+assert.ok(textOf(heard.root).indexOf("第 1 個字") < 0);
 assert.ok(findButton(heard.root, "確定").disabled, "未選齊不能送出");
 findPick(heard.root, "initial", "m").click();
 assert.strictEqual(zhSynth.spoken.length, 1, "點選時不重複朗讀");
 findPick(heard.root, "final", "a").click();
 findPick(heard.root, "tone", "4").click();
+assert.ok(findButton(heard.root, "確定").disabled, "還有字沒選不能送出");
+fillSlot(heard.root, 1, "m", "a", "0");
 assert.strictEqual(findButton(heard.root, "確定").disabled, false);
 findButton(heard.root, "確定").click();
-assert.ok(textOf(heard.root).indexOf("不對。正確是：mā") >= 0);
-assert.ok(textOf(heard.root).indexOf("媽媽") < 0, "詞還沒答完先不揭曉整詞");
+assert.ok(textOf(heard.root).indexOf("不對。正確是：mā ma（媽媽）") >= 0);
+assert.ok(textOf(heard.root).indexOf("媽媽") >= 0, "答完整詞才顯示漢字");
 replay = findButton(heard.root, "再聽一次");
 assert.ok(replay);
 var beforeReplay = zhSynth.spoken.length;
@@ -251,20 +324,10 @@ assert.ok(zhSynth.spoken.length > beforeReplay);
 assert.strictEqual(zhSynth.spoken[zhSynth.spoken.length - 1].text, "媽媽");
 assert.ok(zhSynth.cancelled >= 1);
 findButton(heard.root, "繼續").click();
-assert.ok(textOf(heard.root).indexOf("第 2 個字") >= 0);
-assert.ok(textOf(heard.root).indexOf("媽媽") < 0);
-findPick(heard.root, "initial", "m").click();
-findPick(heard.root, "final", "a").click();
-findPick(heard.root, "tone", "0").click();
-findButton(heard.root, "確定").click();
-assert.ok(textOf(heard.root).indexOf("媽媽") >= 0, "答完才顯示詞");
-assert.ok(textOf(heard.root).indexOf("mā ma") >= 0 || textOf(heard.root).indexOf("māma") >= 0);
-findButton(heard.root, "繼續").click();
-assert.strictEqual(zhSynth.spoken[zhSynth.spoken.length - 1].text, "水");
+assert.ok(textOf(heard.root).indexOf("第 2 題，共 2 題") >= 0);
 assert.ok(textOf(heard.root).indexOf("水") < 0);
-findPick(heard.root, "initial", "sh").click();
-findPick(heard.root, "final", "ui").click();
-findPick(heard.root, "tone", "3").click();
+assert.strictEqual(zhSynth.spoken[zhSynth.spoken.length - 1].text, "水");
+fillSlot(heard.root, 0, "sh", "ui", "3");
 findButton(heard.root, "確定").click();
 assert.ok(textOf(heard.root).indexOf("水") >= 0);
 assert.ok(textOf(heard.root).indexOf("完成！") >= 0);
@@ -319,11 +382,11 @@ assert.ok(textOf(silent.root).indexOf(copy.no_speech) >= 0);
 assert.ok(textOf(silent.root).indexOf(copy.prompt_fallback) >= 0);
 assert.ok(textOf(silent.root).indexOf("媽媽") >= 0, "不能朗讀時仍可看字練習");
 assert.strictEqual(findButton(silent.root, "再聽一次").disabled, true);
-findPick(silent.root, "initial", "m").click();
-findPick(silent.root, "final", "a").click();
-findPick(silent.root, "tone", "1").click();
+fillSlot(silent.root, 0, "m", "a", "1");
+fillSlot(silent.root, 1, "m", "a", "0");
 findButton(silent.root, "確定").click();
-assert.ok(textOf(silent.root).indexOf("答對了！") >= 0);
+assert.ok(textOf(silent.root).indexOf("完成！") >= 0);
+assert.ok(textOf(silent.root).indexOf("媽媽") >= 0);
 
 var broken = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
 broken.speak = function () { throw new Error("speech failed"); };
@@ -331,4 +394,110 @@ var failed = mountWith([mama], broken);
 assert.ok(textOf(failed.root).indexOf(copy.no_speech) >= 0);
 assert.ok(textOf(failed.root).indexOf("媽媽") >= 0);
 
-console.log("mode C tests passed");
+var slowStore = memoryStorage({ pinyinSpeechRate: "slow" });
+var slowSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
+var slowMount = mountWith([mama, shui], slowSynth, { storage: slowStore });
+assert.strictEqual(slowSynth.spoken[0].text, "媽媽");
+assert.strictEqual(slowSynth.spoken[0].rate, 0.7);
+assert.strictEqual(findButton(slowMount.root, "慢").getAttribute("aria-pressed"), "true");
+assert.strictEqual(findButton(slowMount.root, "正常").getAttribute("aria-pressed"), "false");
+findButton(slowMount.root, "快").click();
+assert.strictEqual(slowStore.getItem("pinyinSpeechRate"), "fast");
+assert.strictEqual(findButton(slowMount.root, "快").getAttribute("aria-pressed"), "true");
+assert.strictEqual(slowSynth.spoken.length, 1, "改語速本身不重播");
+var beforeFast = slowSynth.spoken.length;
+findButton(slowMount.root, "再聽一次").click();
+assert.strictEqual(slowSynth.spoken.length, beforeFast + 1);
+assert.strictEqual(slowSynth.spoken[beforeFast].text, "媽媽");
+assert.strictEqual(slowSynth.spoken[beforeFast].rate, 1.3);
+fillSlot(slowMount.root, 0, "m", "a", "1");
+fillSlot(slowMount.root, 1, "m", "a", "0");
+findButton(slowMount.root, "確定").click();
+findButton(slowMount.root, "繼續").click();
+assert.strictEqual(slowSynth.spoken[slowSynth.spoken.length - 1].text, "水");
+assert.strictEqual(slowSynth.spoken[slowSynth.spoken.length - 1].rate, 1.3);
+
+var denied = {
+  getItem: function () { throw new Error("denied"); },
+  setItem: function () { throw new Error("denied"); }
+};
+var deniedSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
+var deniedMount = mountWith([shui], deniedSynth, { storage: denied });
+assert.strictEqual(deniedSynth.spoken[0].rate, 1);
+findButton(deniedMount.root, "慢").click();
+findButton(deniedMount.root, "再聽一次").click();
+assert.strictEqual(deniedSynth.spoken[deniedSynth.spoken.length - 1].rate, 0.7);
+assert.strictEqual(deniedSynth.spoken[deniedSynth.spoken.length - 1].lang, "zh-CN");
+
+var lateRate = createSynth([]);
+mountWith([shui], lateRate, { storage: memoryStorage({ pinyinSpeechRate: "fast" }) });
+assert.strictEqual(lateRate.spoken[0].rate, 1.3);
+lateRate.voices = [{ lang: "zh-CN", name: "Tingting" }];
+lateRate.listeners.voiceschanged();
+assert.strictEqual(lateRate.spoken[1].rate, 1.3);
+assert.strictEqual(lateRate.spoken[1].voice.name, "Tingting");
+
+var neuralCalls = [];
+var neuralStore = memoryStorage({
+  pinyinSpeechEngine: "neural",
+  pinyinSpeechVoice: "female",
+  pinyinSpeechRate: "normal"
+});
+var neuralSynth = createSynth([{ lang: "zh-CN", name: "Microsoft Xiaoxiao" }, { lang: "zh-CN", name: "Microsoft Yunyang" }]);
+var neuralMount = mountWith([mama], neuralSynth, {
+  storage: neuralStore,
+  neuralSpeak: function (request) {
+    neuralCalls.push(request);
+    return Promise.resolve(true);
+  }
+});
+assert.strictEqual(neuralSynth.spoken.length, 0, "神經模型不走 speechSynthesis");
+assert.strictEqual(neuralCalls.length, 1);
+assert.strictEqual(neuralCalls[0].voice, "female");
+assert.strictEqual(neuralCalls[0].rate, 1);
+assert.strictEqual(neuralCalls[0].lengthScale, 1);
+assert.deepStrictEqual(neuralCalls[0].phonemes, ["m", "a", "1", "m", "a", "5"]);
+assert.strictEqual(findButton(neuralMount.root, "神經模型（首次約 63MB×聲線）").getAttribute("aria-pressed"), "true");
+findButton(neuralMount.root, "男聲").click();
+findButton(neuralMount.root, "慢").click();
+assert.strictEqual(neuralStore.getItem("pinyinSpeechVoice"), "male");
+assert.strictEqual(neuralStore.getItem("pinyinSpeechRate"), "slow");
+assert.strictEqual(neuralCalls.length, 1, "改聲線或語速本身不重播");
+findButton(neuralMount.root, "再聽一次").click();
+assert.strictEqual(neuralCalls.length, 2);
+assert.strictEqual(neuralCalls[1].voice, "male");
+assert.strictEqual(neuralCalls[1].rate, 0.7);
+assert.strictEqual(neuralCalls[1].lengthScale, 1 / 0.7);
+assert.strictEqual(neuralCalls[1].hanzi, "媽媽");
+findButton(neuralMount.root, "系統內建").click();
+assert.strictEqual(neuralSynth.spoken.length, 0);
+findButton(neuralMount.root, "再聽一次").click();
+assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].text, "媽媽");
+assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].rate, 0.7);
+assert.strictEqual(neuralSynth.spoken[neuralSynth.spoken.length - 1].voice.name, "Microsoft Yunyang");
+
+var fallbackCalls = 0;
+var fallbackSynth = createSynth([{ lang: "zh-CN", name: "Tingting" }]);
+var fallbackMount = mountWith([mama], fallbackSynth, {
+  storage: memoryStorage({ pinyinSpeechEngine: "neural" }),
+  neuralSpeak: function () {
+    fallbackCalls += 1;
+    return Promise.reject(new Error("download failed"));
+  }
+});
+assert.strictEqual(fallbackCalls, 1);
+
+function finishModeC() {
+  assert.ok(fallbackSynth.spoken.length >= 1, "神經模型失敗時改用系統內建");
+  assert.strictEqual(fallbackSynth.spoken[0].text, "媽媽");
+  assert.strictEqual(fallbackSynth.spoken[0].rate, 1);
+  assert.ok(textOf(fallbackMount.root).indexOf("神經模型暫時無法使用，已改用系統內建。") >= 0);
+  console.log("mode C tests passed");
+}
+
+Promise.resolve().then(function () {
+  return Promise.resolve();
+}).then(finishModeC).catch(function (err) {
+  console.error(err);
+  process.exit(1);
+});

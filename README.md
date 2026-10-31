@@ -107,17 +107,22 @@ node scripts/seed-firestore.js --print
 
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v6`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一，已經安裝的 App 下次開啟才會換掉舊快取。
+`sw.js` 的 `VERSION` 目前是 `v8`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一。靜態檔走網路優先，離線才用快取；一般重新整理就會換上新版本。練習頁底部不再放拼音表。模式 A、C 一次送出整詞（每個字一格），模式 B 仍是輸入整詞繁體字。
 
 ## 聽讀（模式 C）
 
-模式 C 用瀏覽器的 `speechSynthesis`，語句語言固定為 `zh-CN`。聲線清單裡若有普通話（`zh-CN`，或標成 `cmn-Hans-CN`）會優先用它；否則才退到其他中文聲線。沒有中文聲線時不改掛英文聲線，仍以 `zh-CN` 請瀏覽器朗讀。重播讀的是整詞，不是單字。
+模式 C 可以選引擎、聲線和語速。三項都記在這個瀏覽器的 `localStorage`（練習頁不登入）：`pinyinSpeechEngine`（`builtin`／`neural`，預設系統內建）、`pinyinSpeechVoice`（`female`／`male`，預設女聲）、`pinyinSpeechRate`（`slow`／`normal`／`fast`，預設正常）。自動朗讀和「再聽一次」都用這組設定。
 
-- 有的瀏覽器要使用者先按一下才出聲（尤其 iPhone／iPad 的 Safari）。畫面有「再聽一次」。
-- 聲線清單可能晚一點才到。第一次若還沒有普通話聲線，`voiceschanged` 之後會再讀一次。
-- 多音字讀哪一個音由語音引擎決定，可能和詞義不一致。判定仍只看該詞的 `accept`。
+系統內建用瀏覽器的 `speechSynthesis`，語句語言固定為 `zh-CN`。聲線清單裡若有普通話（`zh-CN`，或標成 `cmn-Hans-CN`）會優先用它，並盡量配合女聲或男聲（看 `voice.gender` 或聲線名稱）；對不上就用任一普通話聲線，再不成就用其他中文聲線。沒有中文聲線時不改掛英文聲線，仍以 `zh-CN` 請瀏覽器朗讀。語速「慢」「正常」「快」對應 `SpeechSynthesisUtterance.rate` 的 `0.7`、`1.0`、`1.3`（超出時夾在 0.1–10）。有的聲線或瀏覽器會忽略 `rate`。
+
+神經模型是 Piper 的 `zh_CN-xiao_ya-medium`（女聲）和 `zh_CN-chaowen-medium`（男聲），各約 63MB，第一次用到該聲線才從 [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices) 下載，並放進 Cache API（沒有 Cache API 時改放 IndexedDB）。清除網站資料才會再下載。模型不進 git，也不進 Service Worker 的預快取。這兩個聲線的 `phoneme_type` 是 `pinyin`，不是舊的 espeak／`huayan` 路徑，也不另外下載 g2pW。練習詞已經有聲母、韻母、聲調，就照 Piper 的拼音切分轉成音素（輕聲是 `5`，ü 寫成 `v`）。語速用 `length_scale = 1 / rate`，所以慢約 `1.43`、正常 `1`、快約 `0.77`。下載或合成失敗時會顯示一句說明，並改用系統內建。推論用 onnxruntime-web 1.18 的單執行緒 WASM（`numThreads = 1`），這樣 GitHub Pages 不必送 COOP／COEP。
+
+- 有的瀏覽器要使用者先按一下才出聲（尤其 iPhone／iPad 的 Safari）。畫面有「再聽一次」。神經模型還要 `AudioContext.resume()`，同樣可能被手勢擋住。
+- 聲線清單可能晚一點才到。系統內建第一次若還沒有普通話聲線，`voiceschanged` 之後會再讀一次。神經模型不看這份清單。
+- 系統內建的多音字讀哪一個音由語音引擎決定，可能和詞義不一致。神經模型跟該詞存好的讀音走。判定仍只看該詞的 `accept`。
 - 很長的句子有時會被瀏覽器中途暫停。這裡每次只讀一個詞。
-- 這個瀏覽器完全不能朗讀時，會顯示繁體說明，並把字顯示出來，練習可以繼續。詞組清單在模式 C 不列出字和拼音，避免作答前看到答案。
+- 這個瀏覽器完全不能朗讀、神經模型也失敗時，會顯示繁體說明，並把字顯示出來，練習可以繼續。詞組清單在模式 C 不列出字和拼音，避免作答前看到答案。
+- 小雅、朝文的訓練資料授權見各模型卡（小雅來自標貝 BZNSYP，卡上寫非商業使用）。這裡只在使用者選擇神經模型時連到 Hugging Face 取檔。
 
 ## 測試
 
@@ -127,5 +132,6 @@ node tests/cloud.test.js
 node tests/mode-a.test.js
 node tests/mode-b.test.js
 node tests/mode-c.test.js
+node tests/tts.test.js
 node tests/static.test.js
 ```

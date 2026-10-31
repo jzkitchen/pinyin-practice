@@ -1,5 +1,5 @@
 /* 模式 A 點選拼音。
- * 看到詞，依音節點聲母、韻母、聲調。對錯只走 PinyinGrade 和該詞 accept。
+ * 看到整詞，每個字一格，一次送出整詞。對錯只走 PinyinGrade 和該詞 accept。
  */
 (function (root, factory) {
   var api = factory();
@@ -150,32 +150,46 @@
     };
   }
 
-  function submit(run, choice) {
-    var word = run.words[run.index];
-    var graded = gradeSyllable(word, run.syllable, choice);
-    var copy = run.copy;
-    var wordDone = run.syllable + 1 >= word.readings.length;
-    if (!graded.ok) run.wordMiss = true;
-    var allCorrect = false;
-    var feedback = graded.ok ? textOf(copy, "correct") : wrongLine(copy, graded.correctPinyin);
-    if (wordDone) {
-      allCorrect = !run.wordMiss;
-      if (allCorrect) {
-        run.correctWords += 1;
-        feedback = textOf(copy, "word_done") + " " + spacedPinyin(word);
-      }
-      run.index += 1;
-      run.syllable = 0;
-      run.wordMiss = false;
-      if (run.index >= run.words.length) run.done = true;
-    } else {
-      run.syllable += 1;
+  function choiceComplete(choice) {
+    return !!(choice && choice.initial != null && choice.final != null && choice.tone != null);
+  }
+
+  function gradeWord(word, choices) {
+    var correctPinyin = spacedPinyin(word);
+    var ready = word && choices && choices.length === word.readings.length &&
+      choices.every(choiceComplete);
+    var ok = false;
+    if (ready) {
+      var attempt = choices.map(function (choice) {
+        return {
+          initial: choice.initial || "",
+          final: choice.final,
+          tone: Number(choice.tone)
+        };
+      });
+      ok = gradeApi().gradeAttempt(attempt, word).ok;
     }
+    return { ok: ok, correctPinyin: correctPinyin, hanzi: word ? word.hanzi : "" };
+  }
+
+  function submit(run, choices) {
+    var word = run.words[run.index];
+    var graded = gradeWord(word, choices);
+    var copy = run.copy;
+    var feedback = graded.ok
+      ? textOf(copy, "word_done") + " " + graded.correctPinyin
+      : wrongLine(copy, graded.correctPinyin);
+    if (graded.ok) run.correctWords += 1;
+    run.wordMiss = !graded.ok;
+    run.index += 1;
+    run.syllable = 0;
+    if (run.index >= run.words.length) run.done = true;
     return {
       ok: graded.ok,
       correctPinyin: graded.correctPinyin,
-      wordDone: wordDone,
-      allCorrect: wordDone ? allCorrect : false,
+      hanzi: graded.hanzi,
+      wordDone: true,
+      allCorrect: graded.ok,
       setDone: run.done,
       feedback: feedback
     };
@@ -217,34 +231,41 @@
     var phase = "pick";
     var last = null;
     var reported = false;
-    var picked = { initial: null, final: null, tone: null, hasInitial: false };
+    var active = 0;
+    var slots = [];
+    var slotWord = null;
+
+    function blankSlot() {
+      return { initial: null, final: null, tone: null, hasInitial: false };
+    }
+
+    function syncSlots(word) {
+      if (!word) return;
+      if (slotWord === word && slots.length === word.readings.length) return;
+      slotWord = word;
+      active = 0;
+      slots = [];
+      for (var i = 0; i < word.readings.length; i++) slots.push(blankSlot());
+    }
+
+    function activeSlot() {
+      return slots[active] || blankSlot();
+    }
+
+    function slotDone(slot) {
+      return !!(slot && slot.hasInitial && slot.final != null && slot.tone != null);
+    }
 
     function shown() {
       if (phase === "feedback" && last && last.wordDone) {
         var idx = Math.max(0, run.index - 1);
-        var answered = run.words[idx];
-        return {
-          word: answered,
-          syllable: answered.readings.length - 1,
-          progress: idx + 1
-        };
+        return { word: run.words[idx], progress: idx + 1 };
       }
-      if (phase === "feedback" && last) {
-        return {
-          word: run.words[run.index],
-          syllable: Math.max(0, run.syllable - 1),
-          progress: run.index + 1
-        };
-      }
-      return {
-        word: run.words[run.index],
-        syllable: run.syllable,
-        progress: run.index + 1
-      };
+      return { word: run.words[run.index], progress: run.index + 1 };
     }
 
     function readyToCheck() {
-      return picked.hasInitial && picked.final != null && picked.tone != null;
+      return slots.length > 0 && slots.every(slotDone);
     }
 
     function report() {
@@ -289,6 +310,7 @@
 
       var view = shown();
       var word = view.word;
+      if (phase === "pick") syncSlots(word);
       var before = document.createElement("p");
       before.className = "hint";
       before.textContent = textOf(copy, "before");
@@ -299,18 +321,15 @@
       han.className = "practice-han";
       charsOf(word.hanzi).forEach(function (ch, index) {
         var span = document.createElement("span");
-        if (index === view.syllable) span.className = "current-char";
+        if (phase === "pick" && index === active) span.className = "current-char";
         span.textContent = ch;
         han.appendChild(span);
       });
-      var step = document.createElement("p");
-      step.className = "syllable";
-      step.textContent = syllableLine(copy, view.syllable + 1);
       var progress = document.createElement("p");
       progress.className = "hint";
       progress.textContent = "第 " + view.progress + " 題，共 " + run.total + " 題";
-      if (phase === "feedback") root.append(prompt, han, step, progress);
-      else root.append(before, prompt, han, step, progress);
+      if (phase === "feedback") root.append(prompt, han, progress);
+      else root.append(before, prompt, han, slotRow(word), progress);
 
       if (phase === "feedback" && last) {
         var feedback = document.createElement("p");
@@ -324,7 +343,6 @@
         next.addEventListener("click", function () {
           if (run.done) phase = "done";
           else phase = "pick";
-          picked = { initial: null, final: null, tone: null, hasInitial: false };
           draw();
         });
         var actions = document.createElement("div");
@@ -334,9 +352,10 @@
         return;
       }
 
+      var current = activeSlot();
       root.append(pickerBlock("聲母", "initial", tables.shengmu.map(function (item) {
         return { label: item.label, value: item.key };
-      }), picked.hasInitial ? picked.initial : null), pickerGroups(tables.yunmu), toneBlock(tables.shengdiao));
+      }), current.hasInitial ? current.initial : null), pickerGroups(tables.yunmu), toneBlock(tables.shengdiao));
 
       var check = document.createElement("button");
       check.type = "button";
@@ -345,11 +364,9 @@
       check.disabled = !readyToCheck();
       check.addEventListener("click", function () {
         if (!readyToCheck()) return;
-        last = submit(run, {
-          initial: picked.initial,
-          final: picked.final,
-          tone: picked.tone
-        });
+        last = submit(run, slots.map(function (slot) {
+          return { initial: slot.initial, final: slot.final, tone: slot.tone };
+        }));
         phase = "feedback";
         draw();
         var node = document.getElementById("answer-feedback");
@@ -363,15 +380,48 @@
 
     function choose(part, value) {
       if (phase !== "pick") return;
+      var slot = slots[active];
+      if (!slot) return;
       if (part === "initial") {
-        picked.initial = value;
-        picked.hasInitial = true;
+        slot.initial = value;
+        slot.hasInitial = true;
       } else if (part === "final") {
-        picked.final = value;
+        slot.final = value;
       } else {
-        picked.tone = Number(value);
+        slot.tone = Number(value);
       }
       draw();
+    }
+
+    function slotSpell(slot) {
+      if (!slotDone(slot)) return "？";
+      return gradeApi().spellSyllable(slot.initial, slot.final, slot.tone);
+    }
+
+    function slotRow(word) {
+      var row = document.createElement("div");
+      row.className = "slots";
+      charsOf(word.hanzi).forEach(function (ch, index) {
+        var node = document.createElement("button");
+        node.type = "button";
+        node.className = "slot" + (index === active ? " current" : "");
+        node.setAttribute("data-slot", String(index));
+        node.setAttribute("aria-pressed", index === active ? "true" : "false");
+        var label = document.createElement("span");
+        label.className = "slot-han";
+        label.textContent = ch;
+        var py = document.createElement("span");
+        py.className = "slot-py";
+        py.textContent = slotSpell(slots[index]);
+        node.append(label, py);
+        node.addEventListener("click", function () {
+          if (phase !== "pick") return;
+          active = index;
+          draw();
+        });
+        row.appendChild(node);
+      });
+      return row;
     }
 
     function pickerBlock(titleText, part, items, current) {
@@ -407,7 +457,7 @@
         var row = document.createElement("div");
         row.className = "chips";
         yunmu.filter(function (item) { return item.group === group; }).forEach(function (item) {
-          var pressed = picked.final != null && picked.final === item.key;
+          var pressed = activeSlot().final != null && activeSlot().final === item.key;
           var node = button(item.label, "final", item.key, pressed);
           node.addEventListener("click", function () { choose("final", item.key); });
           row.appendChild(node);
@@ -420,7 +470,7 @@
     function toneBlock(shengdiao) {
       return pickerBlock("聲調", "tone", shengdiao.map(function (item) {
         return { label: item.label + " " + item.mark, value: String(item.tone) };
-      }), picked.tone == null ? null : String(picked.tone));
+      }), activeSlot().tone == null ? null : String(activeSlot().tone));
     }
 
     draw();

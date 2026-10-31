@@ -27,6 +27,7 @@ var required = [
   "js/admin.js",
   "js/grade.js",
   "js/pinyin-tables.js",
+  "js/tts.js",
   "js/modes/a.js",
   "js/modes/b.js",
   "js/modes/c.js",
@@ -150,6 +151,7 @@ execFileSync(process.execPath, ["scripts/export-pages.js", site], { cwd: root })
   "js/admin.js",
   "js/grade.js",
   "js/pinyin-tables.js",
+  "js/tts.js",
   "js/modes/a.js",
   "js/modes/b.js",
   "js/modes/c.js",
@@ -198,9 +200,17 @@ function walk(dir) {
 }
 walk(root);
 
-assert.ok(read("sw.js").indexOf('var VERSION = "v6"') > 0);
-assert.ok(read("README.md").indexOf("`v6`") > 0);
-assert.ok(read("TECH.md").indexOf("`v6`") > 0);
+assert.ok(read("sw.js").indexOf('var VERSION = "v8"') > 0);
+assert.ok(read("sw.js").indexOf("function networkFirst") > 0);
+assert.ok(read("js/app.js").indexOf("拼音表") < 0);
+assert.ok(read("js/app.js").indexOf("registration.update") > 0);
+assert.ok(read("README.md").indexOf("`v8`") > 0);
+assert.ok(read("TECH.md").indexOf("`v8`") > 0);
+assert.ok(read("index.html").indexOf("js/tts.js") < read("index.html").indexOf("js/modes/c.js"));
+assert.ok(read("js/tts.js").indexOf("zh_CN-xiao_ya-medium.onnx") > 0);
+assert.ok(read("js/tts.js").indexOf("zh_CN-chaowen-medium.onnx") > 0);
+assert.ok(read("js/tts.js").indexOf("huggingface.co/rhasspy/piper-voices") > 0);
+assert.ok(!fs.existsSync(path.join(root, "zh_CN-xiao_ya-medium.onnx")));
 assert.ok(read("js/admin.js").indexOf("點選拼音（模式 A）、認讀選擇（模式 B）與組合拼音（模式 C）皆可練習。") > 0);
 assert.ok(read("js/admin.js").indexOf("尚未開放") < 0);
 assert.ok(read("js/admin.js").indexOf("認讀選擇和組合拼音尚未開放") < 0);

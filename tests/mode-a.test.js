@@ -82,18 +82,26 @@ var shui = wordOf("s09");
 var run = ModeA.createRun([mama, shui]);
 assert.strictEqual(run.done, false);
 assert.strictEqual(run.total, 2);
-var first = ModeA.submit(run, { initial: "m", final: "a", tone: 1 });
-assert.strictEqual(first.ok, true);
-assert.strictEqual(first.wordDone, false);
-assert.strictEqual(first.feedback, data.mode_copy.A.correct);
-var second = ModeA.submit(run, { initial: "m", final: "a", tone: 4 });
-assert.strictEqual(second.ok, false);
-assert.strictEqual(second.wordDone, true);
-assert.strictEqual(second.allCorrect, false);
-assert.strictEqual(second.feedback, "不對。正確是：ma");
+var first = ModeA.submit(run, [
+  { initial: "m", final: "a", tone: 1 },
+  { initial: "m", final: "a", tone: 4 }
+]);
+assert.strictEqual(first.ok, false);
+assert.strictEqual(first.wordDone, true);
+assert.strictEqual(first.allCorrect, false);
+assert.strictEqual(first.feedback, "不對。正確是：mā ma");
+assert.strictEqual(first.hanzi, "媽媽");
 assert.strictEqual(run.index, 1);
 assert.strictEqual(run.correctWords, 0);
-var third = ModeA.submit(run, { initial: "sh", final: "ui", tone: 3 });
+var bothTones = ModeA.createRun([mama]);
+var accepted = ModeA.submit(bothTones, [
+  { initial: "m", final: "a", tone: 1 },
+  { initial: "m", final: "a", tone: 1 }
+]);
+assert.strictEqual(accepted.ok, true);
+assert.strictEqual(accepted.allCorrect, true);
+assert.ok(accepted.feedback.indexOf("mā ma") >= 0);
+var third = ModeA.submit(run, [{ initial: "sh", final: "ui", tone: 3 }]);
 assert.strictEqual(third.ok, true);
 assert.strictEqual(third.wordDone, true);
 assert.strictEqual(third.allCorrect, true);
@@ -103,9 +111,13 @@ assert.strictEqual(run.correctWords, 1);
 assert.strictEqual(run.done, true);
 
 var perfect = ModeA.createRun([shui]);
-var only = ModeA.submit(perfect, { initial: "sh", final: "ui", tone: 3 });
+var only = ModeA.submit(perfect, [{ initial: "sh", final: "ui", tone: 3 }]);
 assert.strictEqual(only.allCorrect, true);
 assert.strictEqual(only.feedback.indexOf("shuǐ") > 0, true);
+var incomplete = ModeA.createRun([mama]);
+var missing = ModeA.submit(incomplete, [{ initial: "m", final: "a", tone: 1 }]);
+assert.strictEqual(missing.ok, false);
+assert.strictEqual(missing.wordDone, true);
 
 var empty = ModeA.createRun([]);
 assert.strictEqual(empty.total, 0);
