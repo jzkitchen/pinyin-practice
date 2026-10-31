@@ -4,7 +4,7 @@
 
 ## 頁面
 
-- `index.html` 練習頁。載入拼音 JSON。模式 A 是看字點選拼音。模式 B 看帶調拼音，輸入繁體字詞；作答前不顯示漢字，答錯立刻顯示正確的字和拼音。模式 C 用系統內建 `speechSynthesis`（`zh-CN`）或 Piper 神經模型朗讀詞語，再點聲母、韻母、聲調；作答前不顯示漢字。引擎、聲線、語速存在 `localStorage` 的 `pinyinSpeechEngine`、`pinyinSpeechVoice`、`pinyinSpeechRate`。神經模型是 `zh_CN-xiao_ya-medium`／`zh_CN-chaowen-medium`（pinyin 音素，不是 espeak），執行時才從 Hugging Face 下載並放進 Cache API。沒有朗讀時改為看字，並顯示說明。練習頁不登入。
+- `index.html` 練習頁。載入拼音 JSON。先選詞組和模式，勾選字詞（預設全選，至少一個）後才開始；題序沿用原本順序，只含已勾選的詞。練習進行中不顯示詞組字詞列表。家長頁的字詞管理不變。模式 A 是看字點選拼音。模式 B 看帶調拼音，輸入繁體字詞；作答前不顯示漢字，答錯立刻顯示正確的字和拼音。模式 C 用系統內建 `speechSynthesis`（`zh-CN`）或 Piper 神經模型朗讀詞語，再點聲母、韻母、聲調；作答前不顯示漢字。進入模式 C 會背景下載預設女聲 `zh_CN-xiao_ya-medium`，有進度、可取消；未完成前朗讀走系統內建。男聲 `zh_CN-chaowen-medium` 只在神經模型且選男聲時下載。引擎、聲線、語速存在 `localStorage` 的 `pinyinSpeechEngine`、`pinyinSpeechVoice`、`pinyinSpeechRate`。神經模型是 pinyin 音素，不是 espeak，從 Hugging Face 下載並放進 Cache API，不進 git。沒有朗讀時改為看字，並顯示說明。練習頁不登入。
 - `admin.html` 家長頁。`signInWithEmailAndPassword(APP_CONFIG.parentEmail, 輸入的密碼)`。帳號是 `parent@pinyin-practice.local`。通過後 Firebase Auth 自己記住登入狀態。詞組和字詞的新增、修改、刪除走 `js/cloud.js`。練習紀錄只有這位家長讀得到；未登入不會向 Firestore 列出 `sessions`。更改密碼會先用目前密碼 `reauthenticateWithCredential`，再 `updatePassword`。
 
 ## 資料
@@ -48,4 +48,4 @@ Firestore（與本機形狀相同）：
 
 ## 快取
 
-`sw.js` 的 `VERSION` 目前是 `v8`。頁面、腳本和樣式改為網路優先，離線才用快取；啟動時會 `skipWaiting`、`clients.claim`，並刪掉舊的 `pinyin-practice-*` 快取。練習頁載入時會呼叫 `registration.update()`。換檔後仍要加大版本號。一般重新整理就會拿到新檔，不必先清網站資料。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。
+`sw.js` 的 `VERSION` 目前是 `v9`。頁面、腳本和樣式改為網路優先，離線才用快取；啟動時會 `skipWaiting`、`clients.claim`，並刪掉舊的 `pinyin-practice-*` 快取。練習頁載入時會呼叫 `registration.update()`。換檔後仍要加大版本號。一般重新整理就會拿到新檔，不必先清網站資料。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。

@@ -217,6 +217,40 @@ button[aria-pressed="true"] {
 
 .py { color: var(--accent-deep); font-size: 1.05rem; }
 
+.word-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  min-height: 48px;
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.word-pick input[type="checkbox"] {
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  accent-color: var(--accent-deep);
+}
+
+.piper-downloads { margin: 8px 0; }
+
+.piper-download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.piper-download .hint { margin: 0; flex: 1 1 180px; }
+
+.piper-download button { min-height: 44px; }
+
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .chip {

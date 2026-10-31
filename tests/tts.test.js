@@ -160,5 +160,110 @@ function loadModelBytesCheck() {
     throw new Error("失敗的下載不應成功");
   }, function (err) {
     assert.ok(err);
+    return prefetchChecks();
+  });
+}
+
+function hangFetch(bucket) {
+  return function (url, opts) {
+    bucket.count += 1;
+    bucket.urls.push(String(url));
+    if (opts && opts.signal && opts.signal.aborted) {
+      var aborted = new Error("aborted");
+      aborted.name = "AbortError";
+      return Promise.reject(aborted);
+    }
+    return new Promise(function (resolve, reject) {
+      if (opts && opts.signal) {
+        opts.signal.addEventListener("abort", function () {
+          var err = new Error("aborted");
+          err.name = "AbortError";
+          reject(err);
+        });
+      }
+    });
+  };
+}
+
+function flushed() {
+  return Promise.resolve().then(function () { return Promise.resolve(); });
+}
+
+function prefetchChecks() {
+  Tts.resetDownloads();
+  var bucket = { count: 0, urls: [] };
+  var first = Tts.prefetchVoice("female", { cache: memoryCache(), fetch: hangFetch(bucket) });
+  assert.strictEqual(Tts.downloadState("female").state, "loading");
+  assert.strictEqual(Tts.downloadState("male").state, "idle");
+  return flushed().then(function () {
+    assert.strictEqual(bucket.count, 1);
+    assert.ok(bucket.urls[0].indexOf("zh_CN-xiao_ya-medium.onnx") > 0);
+    assert.ok(bucket.urls[0].indexOf("chaowen") < 0);
+    assert.strictEqual(Tts.isModelReady("female"), false);
+    Tts.warmupVoice("female", { cache: memoryCache(), fetch: hangFetch(bucket) });
+    assert.strictEqual(bucket.count, 1);
+    Tts.cancelDownload("female");
+    assert.strictEqual(Tts.downloadState("female").state, "cancelled");
+    Tts.warmupVoice("female", { cache: memoryCache(), fetch: hangFetch(bucket) });
+    assert.strictEqual(bucket.count, 1, "取消後暖機不再下載");
+    return first;
+  }).then(function (value) {
+    assert.strictEqual(value, null);
+    var again = Tts.prefetchVoice("female", { cache: memoryCache(), fetch: hangFetch(bucket) });
+    assert.strictEqual(Tts.downloadState("female").state, "loading");
+    return flushed().then(function () {
+      assert.strictEqual(bucket.count, 2, "再次要求會重新下載");
+      Tts.cancelDownload("female");
+      return again;
+    });
+  }).then(function () {
+    Tts.resetDownloads();
+    var fetches = 0;
+    var payload = new Uint8Array([7, 8, 9]);
+    var cache = memoryCache();
+    function once() {
+      fetches += 1;
+      var stream = new ReadableStream({
+        start: function (controller) {
+          controller.enqueue(payload);
+          controller.close();
+        }
+      });
+      return Promise.resolve(new Response(stream, {
+        status: 200,
+        headers: { "content-length": "3" }
+      }));
+    }
+    return Tts.prefetchVoice("female", { cache: cache, fetch: once }).then(function (bytes) {
+      assert.strictEqual(Tts.isModelReady("female"), true);
+      assert.strictEqual(new Uint8Array(bytes).join(","), "7,8,9");
+      return Tts.prefetchVoice("female", {
+        cache: cache,
+        fetch: function () {
+          fetches += 1;
+          throw new Error("不應再下載");
+        }
+      });
+    }).then(function () {
+      assert.strictEqual(fetches, 1);
+      assert.strictEqual(Tts.isModelReady("male"), false);
+      Tts.markVoiceReady("male");
+      assert.strictEqual(Tts.isModelReady("male"), true);
+      Tts.resetDownloads();
+      assert.strictEqual(Tts.isModelReady("female"), false);
+      assert.strictEqual(Tts.isModelReady("male"), false);
+      return Tts.prefetchVoice("male", {
+        cache: memoryCache(),
+        fetch: function (url) {
+          assert.ok(String(url).indexOf("zh_CN-chaowen-medium.onnx") > 0);
+          return Promise.resolve(new Response("", { status: 503 }));
+        }
+      });
+    }).then(function (value) {
+      assert.strictEqual(value, null);
+      assert.strictEqual(Tts.downloadState("male").state, "error");
+      assert.strictEqual(Tts.isModelReady("male"), false);
+      Tts.resetDownloads();
+    });
   });
 }

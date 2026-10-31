@@ -1,7 +1,8 @@
 /* 模式 C 的朗讀設定與 Piper 拼音音素。
  * 系統內建走 speechSynthesis。神經模型是 Piper zh_CN（phoneme_type: pinyin），
  * 不用 espeak，也不下載 g2pW。練習詞已有聲母、韻母、聲調，直接對上模型的音素。
- * 模型本體約 63MB，第一次使用才從 Hugging Face 下載，不放進 git。
+ * 模型本體約 63MB，不放進 git。進入模式 C 時背景下載預設女聲；
+ * 男聲只在選了神經模型的男聲時才下載。下載完成前朗讀走系統內建。
  */
 (function (root, factory) {
   var api = factory();
@@ -72,6 +73,7 @@
   var generation = 0;
   var sharedCtx = null;
   var currentSource = null;
+  var jobs = {};
 
   function speechRateOption(id) {
     var i;
@@ -275,24 +277,43 @@
     });
   }
 
-  function readBody(res, onProgress) {
+  function abortError() {
+    var err = new Error("aborted");
+    err.name = "AbortError";
+    return err;
+  }
+
+  function isAbortError(err) {
+    return !!(err && (err.name === "AbortError" || err.message === "aborted"));
+  }
+
+  function readBody(res, onProgress, signal) {
     var total = 0;
     try {
       total = Number(res.headers && res.headers.get && res.headers.get("content-length")) || 0;
     } catch (err) {
       total = 0;
     }
+    if (signal && signal.aborted) return Promise.reject(abortError());
     if (!res.body || typeof res.body.getReader !== "function") {
       return res.arrayBuffer().then(function (buf) {
+        if (signal && signal.aborted) throw abortError();
         if (onProgress) onProgress(buf.byteLength, total || buf.byteLength);
         return buf;
       });
     }
     var reader = res.body.getReader();
+    if (signal && typeof signal.addEventListener === "function") {
+      signal.addEventListener("abort", function () {
+        try { reader.cancel(); } catch (err) {}
+      });
+    }
     var chunks = [];
     var received = 0;
     function pump() {
+      if (signal && signal.aborted) return Promise.reject(abortError());
       return reader.read().then(function (step) {
+        if (signal && signal.aborted) throw abortError();
         if (step.done) {
           var all = new Uint8Array(received);
           var offset = 0;
@@ -381,12 +402,18 @@
       return idbPut(url, buffer);
     }
     return fromCache().then(function (cached) {
+      if (opts.signal && opts.signal.aborted) return Promise.reject(abortError());
       if (cached && cached.byteLength) return cached;
       if (typeof fetchFn !== "function") throw new Error("無法下載語音模型");
-      return fetchFn(url).then(function (res) {
+      var fetchOpts = opts.signal ? { signal: opts.signal } : {};
+      return fetchFn(url, fetchOpts).then(function (res) {
+        if (opts.signal && opts.signal.aborted) return Promise.reject(abortError());
         if (!res || !res.ok) throw new Error("無法下載語音模型");
-        return readBody(res, opts.onProgress);
-      }).then(save);
+        return readBody(res, opts.onProgress, opts.signal);
+      }).then(function (buf) {
+        if (opts.signal && opts.signal.aborted) return Promise.reject(abortError());
+        return save(buf);
+      });
     });
   }
 
@@ -499,6 +526,205 @@
     }
   }
 
+  function voiceKey(voice) {
+    return voice === "male" ? "male" : "female";
+  }
+
+  function jobOf(voice) {
+    var key = voiceKey(voice);
+    if (!jobs[key]) {
+      jobs[key] = {
+        voice: key,
+        state: "idle",
+        loaded: 0,
+        total: 0,
+        bytes: null,
+        controller: null,
+        listeners: [],
+        promise: null
+      };
+    }
+    return jobs[key];
+  }
+
+  function snapshot(job) {
+    return {
+      voice: job.voice,
+      state: job.state,
+      loaded: job.loaded || 0,
+      total: job.total || 0
+    };
+  }
+
+  function emit(job) {
+    var snap = snapshot(job);
+    job.listeners.slice().forEach(function (fn) {
+      try { fn(snap); } catch (err) {}
+    });
+  }
+
+  function downloadState(voice) {
+    var job = jobs[voiceKey(voice)];
+    if (!job) return { voice: voiceKey(voice), state: "idle", loaded: 0, total: 0 };
+    return snapshot(job);
+  }
+
+  function watchDownload(voice, fn) {
+    var job = jobOf(voice);
+    job.listeners.push(fn);
+    try { fn(snapshot(job)); } catch (err) {}
+    return function () {
+      var index = job.listeners.indexOf(fn);
+      if (index >= 0) job.listeners.splice(index, 1);
+    };
+  }
+
+  function isModelReady(voice) {
+    var job = jobs[voiceKey(voice)];
+    return !!(job && job.state === "ready");
+  }
+
+  function readyBytes(voice) {
+    var job = jobs[voiceKey(voice)];
+    if (job && job.state === "ready" && job.bytes) return job.bytes;
+    return null;
+  }
+
+  function markVoiceReady(voice) {
+    var job = jobOf(voice);
+    job.state = "ready";
+    job.bytes = job.bytes || new Uint8Array([1]).buffer;
+    job.loaded = job.bytes.byteLength || 1;
+    job.total = job.loaded;
+    emit(job);
+    return true;
+  }
+
+  function resetDownloads() {
+    Object.keys(jobs).forEach(function (key) {
+      var job = jobs[key];
+      job.state = "cancelled";
+      if (job.controller) {
+        try { job.controller.abort(); } catch (err) {}
+        job.controller = null;
+      }
+      job.listeners = [];
+    });
+    jobs = {};
+  }
+
+  function prefetchVoice(voice, opts) {
+    opts = opts || {};
+    var key = voiceKey(voice);
+    var job = jobOf(key);
+    if (job.state === "loading" || job.state === "ready") return job.promise || Promise.resolve(job.bytes);
+    var controller = typeof AbortController === "function" ? new AbortController() : null;
+    job.state = "loading";
+    job.loaded = 0;
+    job.total = 0;
+    job.bytes = null;
+    job.controller = controller;
+    emit(job);
+    job.promise = loadModelBytes(MODELS[key].url, {
+      cache: opts.cache,
+      fetch: opts.fetch,
+      signal: controller ? controller.signal : null,
+      onProgress: function (loaded, total) {
+        if (job.state !== "loading") return;
+        job.loaded = loaded;
+        job.total = total;
+        emit(job);
+      }
+    }).then(function (bytes) {
+      if (job.state !== "loading") return null;
+      job.state = "ready";
+      job.bytes = bytes;
+      job.loaded = bytes && bytes.byteLength ? bytes.byteLength : job.loaded;
+      job.total = job.loaded;
+      job.controller = null;
+      emit(job);
+      return bytes;
+    }).catch(function (err) {
+      if (job.state === "cancelled" || isAbortError(err)) {
+        if (job.state !== "cancelled") job.state = "cancelled";
+        job.controller = null;
+        emit(job);
+        return null;
+      }
+      job.state = "error";
+      job.controller = null;
+      emit(job);
+      return null;
+    });
+    return job.promise;
+  }
+
+  function warmupVoice(voice, opts) {
+    var job = jobOf(voice);
+    if (job.state === "loading" || job.state === "ready" || job.state === "cancelled") {
+      return job.promise || Promise.resolve(job.bytes);
+    }
+    return prefetchVoice(voice, opts);
+  }
+
+  function cancelDownload(voice) {
+    var job = jobs[voiceKey(voice)];
+    if (!job || job.state !== "loading") return downloadState(voice);
+    job.state = "cancelled";
+    var controller = job.controller;
+    job.controller = null;
+    if (controller) {
+      try { controller.abort(); } catch (err) {}
+    }
+    emit(job);
+    return downloadState(voice);
+  }
+
+  function mountDownloadBar(parent, onChange) {
+    var stops = [];
+    var docRef = typeof document !== "undefined" ? document : null;
+    if (!docRef || !parent || typeof docRef.createElement !== "function") {
+      return function () {};
+    }
+    ["female", "male"].forEach(function (voice) {
+      var job = downloadState(voice);
+      if (job.state !== "loading" && job.state !== "error") return;
+      var label = voice === "male" ? "男聲" : "女聲";
+      var row = docRef.createElement("div");
+      row.className = "piper-download";
+      var text = docRef.createElement("p");
+      text.className = "hint";
+      text.setAttribute("role", "status");
+      if (job.state === "error") {
+        text.textContent = label + "模型下載失敗，朗讀先用系統內建。";
+        row.appendChild(text);
+      } else {
+        text.textContent = progressText(label, job.loaded, job.total);
+        var cancelBtn = docRef.createElement("button");
+        cancelBtn.type = "button";
+        cancelBtn.className = "secondary";
+        cancelBtn.id = "piper-cancel-" + voice;
+        cancelBtn.textContent = "取消下載";
+        cancelBtn.addEventListener("click", function () {
+          cancelDownload(voice);
+        });
+        row.append(text, cancelBtn);
+        stops.push(watchDownload(voice, function (next) {
+          if (next.state === "loading") {
+            text.textContent = progressText(label, next.loaded, next.total);
+            return;
+          }
+          if (typeof onChange === "function") onChange(next);
+        }));
+      }
+      parent.appendChild(row);
+    });
+    return function () {
+      stops.forEach(function (stop) { stop(); });
+      stops = [];
+    };
+  }
+
   function speakNeural(options) {
     options = options || {};
     var voice = options.voice === "male" ? "male" : "female";
@@ -508,13 +734,15 @@
     if (!ids) return Promise.reject(new Error("無法標音"));
     var gen = generation;
     var label = voice === "male" ? "男聲" : "女聲";
-    return loadModelBytes(model.url, {
+    var prepared = readyBytes(voice);
+    var modelPromise = prepared ? Promise.resolve(prepared) : loadModelBytes(model.url, {
       cache: options.cache,
       fetch: options.fetch,
       onProgress: function (loaded, total) {
         if (typeof options.onProgress === "function") options.onProgress(loaded, total, label);
       }
-    }).then(function (bytes) {
+    });
+    return modelPromise.then(function (bytes) {
       if (gen !== generation) return false;
       if (typeof options.onStatus === "function") options.onStatus("正在準備" + label + "模型…");
       return sessionFor(voice, bytes);
@@ -554,6 +782,14 @@
     progressText: progressText,
     loadModelBytes: loadModelBytes,
     speakNeural: speakNeural,
-    cancel: cancel
+    cancel: cancel,
+    prefetchVoice: prefetchVoice,
+    warmupVoice: warmupVoice,
+    cancelDownload: cancelDownload,
+    downloadState: downloadState,
+    isModelReady: isModelReady,
+    markVoiceReady: markVoiceReady,
+    resetDownloads: resetDownloads,
+    mountDownloadBar: mountDownloadBar
   };
 });
