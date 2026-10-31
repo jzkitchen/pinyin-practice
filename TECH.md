@@ -9,7 +9,7 @@
 
 ## 資料
 
-唯一來源是 `data/pinyin_tables_and_seeds_v1.json`（專家交付 v1，2026-10-30）。
+種子詞、模式文案、多音原則在 `data/pinyin_tables_and_seeds_v1.json`（2026-10-30）。點選表是 `data/book_pinyin_table_v1.json`（2026-10-31，聲母 21、韻母 35）。`js/pinyin-tables.js` 載入後以書本表蓋過聲母、韻母、聲調、`zero_initial_spell`、`ui_copy`、`normalize_rules`。韻母 key 用書本完整式（iou、uei、uen）。舊資料裡的 iu、ui、un 仍判成同一個韻母。
 
 Firestore（與本機形狀相同）：
 
@@ -23,7 +23,7 @@ Firestore（與本機形狀相同）：
 
 ## 判定
 
-`js/grade.js` 在比對前：Unicode NFC、小寫、去掉空白和隔音號、`v` 改成 `ü`、j／q／x 緊接的 u 改成 ü（`iu` 不受影響，因為 u 不是緊跟在 j／q／x 後面）。
+`js/grade.js` 在比對前：Unicode NFC、小寫、去掉空白和隔音號、`v` 改成 `ü`、完整式收成省略式（iou→iu、uei→ui、uen→un，聲調留在省略式該標的字母上）、j／q／x 緊接的 u 改成 ü（`iu` 不受影響，因為 u 不是緊跟在 j／q／x 後面）。聲母留空時，音節拼寫走書本表的 `zero_initial_spell`。
 
 模式 A、C 一次送出整詞：畫面上每個字一格，共用一組聲母、韻母、聲調，選滿才可按「確定」。整詞用 `PinyinGrade.gradeAttempt` 對上該詞的 `accept`（含多音）。答錯立刻顯示整詞帶調拼音；模式 C 同時顯示繁體字。`gradeSyllable` 仍可用來檢查單一音節。整組做完顯示 `set_done`。模式 C 的 `submit` 走模式 A，紀錄的 `mode` 是 `C`。模式 B 把輸入的字串先 trim、再去掉空白（含全形空格），然後和該詞的 `han`（練習資料為 `hanzi`）做完全比對。不把簡體或異體算對，也不用 `accept` 當字形答案。題幹是詞上的帶調拼音；有 `readings` 時以空格分開的音節顯示。紀錄的 `mode` 是 `B`，欄位與 A、C 相同。
 
@@ -48,4 +48,4 @@ Firestore（與本機形狀相同）：
 
 ## 快取
 
-`sw.js` 的 `VERSION` 目前是 `v9`。頁面、腳本和樣式改為網路優先，離線才用快取；啟動時會 `skipWaiting`、`clients.claim`，並刪掉舊的 `pinyin-practice-*` 快取。練習頁載入時會呼叫 `registration.update()`。換檔後仍要加大版本號。一般重新整理就會拿到新檔，不必先清網站資料。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。
+`sw.js` 的 `VERSION` 目前是 `v10`。頁面、腳本和樣式改為網路優先，離線才用快取；啟動時會 `skipWaiting`、`clients.claim`，並刪掉舊的 `pinyin-practice-*` 快取。練習頁載入時會呼叫 `registration.update()`。換檔後仍要加大版本號。一般重新整理就會拿到新檔，不必先清網站資料。Firebase SDK 來自 CDN，不進這個快取。語音引擎也不在這個快取裡。

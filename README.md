@@ -23,13 +23,17 @@ python3 -m http.server 8080
 
 ## 資料來源
 
-聲母（22，含零聲母）、韻母（35）、聲調（5，含輕聲）、40 個種子詞、模式文案、多音規則，都以這個檔為準：
+40 個種子詞、模式文案、多音規則在：
 
 `data/pinyin_tables_and_seeds_v1.json`
 
-這是 2026-10-30 的專家交付 v1。`js/pinyin-tables.js` 只負責載入，不另抄一份表。
+模式 A、C 的點選表以書本聲母／韻母為準（2026-10-31）：
 
-判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、j／q／x 後面的 u 與 ü 相同。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。模式 A 與模式 C 都把點選結果送進同一個 `PinyinGrade`，不另寫一套判定。模式 B 不比拼音：輸入的繁體字去掉空白後，要和該詞的漢字完全相同（種子欄位 `han`，練習資料裡是 `hanzi`）。不另收簡體或異體。`accept` 仍只表示可接受的拼音，題幹用詞上的帶調拼音。
+`data/book_pinyin_table_v1.json`
+
+聲母 21 個，依書本分六組，不放 y、w，也不放「零」按鈕；沒有輔音就留空。韻母 35 個，分開口、齊齒、合口、撮口四欄，按鈕用書上的完整式（iou、uei、uen，以及 ü、üe、üan、ün）。不另設整體認讀區，點選區暫不放 er。`js/pinyin-tables.js` 載入時用書本表蓋過種子檔的聲母、韻母、聲調、`zero_initial_spell`、`ui_copy`、`normalize_rules`。
+
+判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、iou 與 iu、uei 與 ui、uen 與 un 相同、j／q／x 後面的 u 與 ü 相同。有聲母時寫成 iu、ui、un；j／q／x 後的 ü 寫成 u；聲母留空時依 `zero_initial_spell` 寫成 yi、wu、yu 等。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。模式 A 與模式 C 都把點選結果送進同一個 `PinyinGrade`，不另寫一套判定。模式 B 不比拼音：輸入的繁體字去掉空白後，要和該詞的漢字完全相同（種子欄位 `han`，練習資料裡是 `hanzi`）。不另收簡體或異體。`accept` 仍只表示可接受的拼音，題幹用詞上的帶調拼音。
 
 ## Firebase
 
@@ -107,7 +111,7 @@ node scripts/seed-firestore.js --print
 
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v9`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一。靜態檔走網路優先，離線才用快取；一般重新整理就會換上新版本。練習頁底部不再放拼音表，練習進行中也不再列出詞組字詞。模式 A、C 一次送出整詞（每個字一格），模式 B 仍是輸入整詞繁體字。
+`sw.js` 的 `VERSION` 目前是 `v10`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一。靜態檔走網路優先，離線才用快取；一般重新整理就會換上新版本。練習頁底部不再放拼音表，練習進行中也不再列出詞組字詞。模式 A、C 一次送出整詞（每個字一格），模式 B 仍是輸入整詞繁體字。
 
 ## 聽讀（模式 C）
 
@@ -136,4 +140,5 @@ node tests/mode-c.test.js
 node tests/tts.test.js
 node tests/practice-select.test.js
 node tests/static.test.js
+node tests/book-table.test.js
 ```

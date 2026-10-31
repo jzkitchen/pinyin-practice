@@ -6,6 +6,7 @@
 var APP_CONFIG = {
   storage: "firebase",
   dataUrl: "data/pinyin_tables_and_seeds_v1.json",
+  bookTableUrl: "data/book_pinyin_table_v1.json",
   demoSetId: "set_demo",
   demoSetName: "範例",
   parentEmail: "parent@pinyin-practice.local"

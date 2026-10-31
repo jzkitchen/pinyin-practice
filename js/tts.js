@@ -192,7 +192,11 @@
   }
 
   function syllableBase(initial, final) {
-    var fin = String(final || "").replace(/ü/g, "v");
+    var fin = String(final || "");
+    if (fin === "iou") fin = "iu";
+    else if (fin === "uei") fin = "ui";
+    else if (fin === "uen") fin = "un";
+    fin = fin.replace(/ü/g, "v");
     var ini = String(initial || "");
     if (ini) return ini + fin;
     if (fin === "i" || fin === "in" || fin === "ing") return "y" + fin;
