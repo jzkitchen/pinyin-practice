@@ -266,7 +266,7 @@ assert.strictEqual(played.done[0].total, 2);
 assert.strictEqual(played.done[0].correct, 1);
 
 var none = mountWith([]);
-assert.ok(textOf(none.root).indexOf("請先選擇有字詞的詞組。") >= 0);
+assert.ok(textOf(none.root).indexOf("請先選擇有字詞的單元。") >= 0);
 assert.strictEqual(none.doc.getElementById("han-answer"), null);
 
 console.log("mode B tests passed");

@@ -1,4 +1,4 @@
-/* 模式 C 組合拼音：聽整詞，每個字一格，一次送出整詞。
+/* 模式 C 組合拼音：聽整詞，每個音節一格，一次送出整詞。
  * 作答前不顯示漢字。判定走模式 A／PinyinGrade，多音看 accept。
  * 瀏覽器不能朗讀時改為看字，並顯示說明。
  */
@@ -105,13 +105,9 @@
     }
   }
 
-  function charsOf(text) {
-    return Array.from(String(text || ""));
-  }
-
   function spacedPinyin(word) {
     return word.readings.map(function (reading) {
-      return gradeApi().spellSyllable(reading.initial, reading.final, reading.tone);
+      return gradeApi().spellSyllable(reading.initial, reading.final, reading.tone, reading.erhua);
     }).join(" ");
   }
 
@@ -361,14 +357,14 @@
 
     function slotSpell(slot) {
       if (!slotDone(slot)) return "？";
-      return gradeApi().spellSyllable(slot.initial || "", slot.final, slot.tone);
+      return gradeApi().spellSyllable(slot.initial || "", slot.final, slot.tone, !!slot.erhua);
     }
 
     function slotRow(word, showHanzi) {
       var row = document.createElement("div");
       row.className = "slots";
-      var chars = charsOf(word.hanzi);
-      chars.forEach(function (ch, index) {
+      var labels = modeA().syllableLabels(word);
+      labels.forEach(function (ch, index) {
         var node = document.createElement("button");
         node.type = "button";
         node.className = "slot" + (index === active ? " current" : "");
@@ -394,7 +390,7 @@
     function hanziLine(word, syllable, markCurrent) {
       var han = document.createElement("p");
       han.className = "practice-han";
-      charsOf(word.hanzi).forEach(function (ch, index) {
+      modeA().syllableLabels(word).forEach(function (ch, index) {
         var span = document.createElement("span");
         if (markCurrent && index === syllable) span.className = "current-char";
         span.textContent = ch;
@@ -487,7 +483,7 @@
       if (!words.length) {
         var empty = document.createElement("p");
         empty.className = "prompt";
-        empty.textContent = "請先選擇有字詞的詞組。";
+        empty.textContent = "請先選擇有字詞的單元。";
         rootEl.appendChild(empty);
         return;
       }
@@ -537,7 +533,15 @@
       }
       rootEl.appendChild(prompt);
       if (showHanzi) rootEl.appendChild(hanziLine(word, active, phase === "pick"));
-      if (phase === "pick") rootEl.appendChild(slotRow(word, showHanzi));
+      if (phase === "pick") {
+        rootEl.appendChild(slotRow(word, showHanzi));
+        modeA().appendErhuaToggle(rootEl, word.readings[active], activeSlot(), function () {
+          var slot = slots[active];
+          if (!slot) return;
+          slot.erhua = !slot.erhua;
+          draw();
+        });
+      }
       if (revealWord) {
         var py = document.createElement("p");
         py.className = "reveal-py";
@@ -581,7 +585,7 @@
       check.addEventListener("click", function () {
         if (!readyToCheck()) return;
         last = submit(run, slots.map(function (slot) {
-          return { initial: slot.initial || "", final: slot.final, tone: slot.tone };
+          return { initial: slot.initial || "", final: slot.final, tone: slot.tone, erhua: !!slot.erhua };
         }));
         phase = "feedback";
         draw();

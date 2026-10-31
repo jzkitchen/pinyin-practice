@@ -1,6 +1,6 @@
-/* 練習頁。選詞組、選模式，勾選字詞後才開始。
+/* 練習頁。選單元、選模式，勾選字詞後才開始。
  * 模式 A 看字點選；模式 B 看拼音輸入繁體字；模式 C 聽讀後點選。
- * 練習進行中不列出詞組字詞。練習頁不登入。
+ * 字詞來自靜態 JSON。練習紀錄只寫這台裝置的 localStorage。
  */
 (function () {
   "use strict";
@@ -16,9 +16,7 @@
     sets: [],
     words: [],
     selected: {},
-    practicing: false,
-    preview: false,
-    previewMessage: ""
+    practicing: false
   };
 
   var root = typeof document === "undefined" ? null : document.getElementById("practice-root");
@@ -105,11 +103,11 @@
 
       var setLabel = document.createElement("label");
       setLabel.setAttribute("for", "set-select");
-      setLabel.textContent = "詞組";
+      setLabel.textContent = "單元";
       var setSelect = document.createElement("select");
       setSelect.id = "set-select";
       if (!state.sets.length) {
-        setSelect.appendChild(option("", "還沒有詞組"));
+        setSelect.appendChild(option("", "還沒有單元"));
       } else {
         state.sets.forEach(function (set) {
           setSelect.appendChild(option(set.id, set.name));
@@ -167,7 +165,8 @@
         setId: state.setId,
         onDone: function (record) {
           if (!record || !record.setId) return Promise.resolve();
-          return PinyinCloud.createSession(record).catch(function () {});
+          if (typeof PinyinSessions === "undefined" || !PinyinSessions) return Promise.resolve();
+          return PinyinSessions.createSession(record).catch(function () {});
         }
       });
       root.append(tools, panel);
@@ -219,7 +218,7 @@
     function syncChrome() {
       var total = state.words.length;
       var picked = selectedWords(state.words, state.selected).length;
-      if (!total) count.textContent = "這個詞組還沒有字詞。";
+      if (!total) count.textContent = "這個單元還沒有字詞。";
       else count.textContent = "共 " + total + " 個，已選 " + picked + " 個。";
       var blocked = picked < 1;
       start.disabled = blocked;
@@ -292,51 +291,23 @@
     render();
   }
 
-  function loadWords() {
-    if (!state.setId) {
-      applyWords([]);
-      return Promise.resolve();
-    }
-    if (state.preview) {
-      var catalog = PinyinCloud.demoCatalog();
-      applyWords(state.setId === catalog.set.id ? catalog.words : []);
-      return Promise.resolve();
-    }
-    return PinyinCloud.listWords(state.setId).then(function (words) {
-      applyWords(words);
-    });
+  function wordsFor(setId) {
+    var set = state.sets.find(function (item) { return item.id === setId; });
+    return set && set.words ? set.words : [];
   }
 
-  function settleSets(sets) {
-    if (sets && sets.length) {
-      state.preview = false;
-      state.previewMessage = "";
-      return sets;
-    }
-    if (!APP_CONFIG || APP_CONFIG.storage !== "firebase") {
-      state.preview = false;
-      state.previewMessage = "";
-      return sets || [];
-    }
-    state.preview = true;
-    state.previewMessage = "雲端詞組尚未就緒，現在練習內建範例。";
-    return [PinyinCloud.demoCatalog().set];
+  function loadWords() {
+    applyWords(state.setId ? wordsFor(state.setId) : []);
+    return Promise.resolve();
   }
 
   function boot() {
     setStatus("載入中…");
     PinyinTables.load(APP_CONFIG.dataUrl, APP_CONFIG.bookTableUrl).then(function (data) {
       PinyinGrade.init(data);
-      PinyinCloud.init(APP_CONFIG, { tables: data });
-      return PinyinCloud.connect();
-    }).then(function () {
-      return PinyinCloud.seedIfEmpty();
+      return PinyinUnits.loadAll();
     }).then(function (sets) {
-      return settleSets(sets);
-    }).catch(function () {
-      return settleSets(null);
-    }).then(function (sets) {
-      state.sets = sets;
+      state.sets = sets || [];
       var saved = null;
       var savedMode = null;
       try {
@@ -344,9 +315,9 @@
         savedMode = sessionStorage.getItem("practiceMode");
       } catch (err) {}
       if (savedMode === "A" || savedMode === "B" || savedMode === "C") state.mode = savedMode;
-      if (saved && sets.some(function (set) { return set.id === saved; })) state.setId = saved;
-      else if (sets[0]) state.setId = sets[0].id;
-      setStatus(state.preview ? state.previewMessage : "");
+      if (saved && state.sets.some(function (set) { return set.id === saved; })) state.setId = saved;
+      else if (state.sets[0]) state.setId = state.sets[0].id;
+      setStatus("");
       if (state.mode === "C") startModeCDownloads(true);
       return loadWords();
     }).catch(function (err) {

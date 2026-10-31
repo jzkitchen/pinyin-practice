@@ -6,14 +6,14 @@
 
 ## 現在有什麼
 
-- 練習頁 `index.html`：選詞組和練習方式後，先勾選要練的字詞（預設全選，至少一個）再按「開始」。練習進行中不再顯示「這個詞組的字詞」。
-  - A 點選拼音：看字詞，依每個字點聲母、韻母、聲調。答錯立刻看到帶調拼音，做完勾選的字詞就結束。開練前的清單顯示漢字。
-  - C 組合拼音：先聽詞語，再依每個字點聲母、韻母、聲調。作答前不顯示漢字；答完該詞才顯示字和帶調拼音。答錯立刻看到正確拼音。開練前的清單顯示漢字，方便選詞。
-  - B 認讀選擇：看帶調拼音，輸入繁體字詞。答錯立刻看到正確的字和拼音。做完勾選的字詞就結束。開練前的清單只顯示拼音，避免先看到漢字。
-- 家長頁 `admin.html`：用 Firebase 家長帳號登入後，可以新增、修改、刪除詞組和字詞。
-- 練習頁不登入。字詞讀取和練習紀錄的新增都不需要家長密碼。
+- 練習頁 `index.html`：選單元和練習方式後，先勾選要練的字詞（預設全選，至少一個）再按「開始」。練習進行中不再顯示單元字詞清單。
+  - A 點選拼音：看字詞，依每個音節點聲母、韻母、聲調。答錯立刻看到帶調拼音，做完勾選的字詞就結束。開練前的清單顯示漢字。兒化音節（如「信兒」）選完後可按「兒化」，在該音節末尾加 r。
+  - C 組合拼音：先聽詞語，再依每個音節點聲母、韻母、聲調。作答前不顯示漢字；答完該詞才顯示字和帶調拼音。答錯立刻看到正確拼音。兒化開關與模式 A 相同。開練前的清單顯示漢字，方便選詞。
+  - B 認讀選擇：看帶調拼音，輸入繁體字詞。答錯立刻看到正確的字和拼音。做完勾選的字詞就結束。開練前的清單只顯示拼音，避免先看到漢字。口信兒要輸入「口信兒」。
+- 字詞寫在倉庫的 `data/units/`。要改詞，更新這些 JSON 再發佈練習頁。沒有家長登入，也沒有線上改詞頁。
+- 練習紀錄（答對題數、用時等）只存在這台裝置的 `localStorage`（鍵 `pinyin-practice.sessions.v1`）。
 
-請用靜態伺服器或 GitHub Pages 開啟，不要直接點開檔案。瀏覽器會擋住讀取 JSON，Firebase 也需要 HTTPS 或 localhost。
+請用靜態伺服器或 GitHub Pages 開啟，不要直接點開檔案。瀏覽器會擋住讀取 JSON。
 
 ```bash
 python3 -m http.server 8080
@@ -23,9 +23,17 @@ python3 -m http.server 8080
 
 ## 資料來源
 
-40 個種子詞、模式文案、多音規則在：
+目前練習的字詞只有單元一，檔案是：
+
+`data/units/unit-01.json`
+
+單元選擇顯示「單元一」。九個詞保留審核欄位（`accept`、`syllables`、兒化、聲調、筆記）。之後要加單元，在 `js/units.js` 的清單加一筆，並放上對應 JSON。
+
+模式文案、多音規則，以及被書本表蓋過的舊拼音表，仍在：
 
 `data/pinyin_tables_and_seeds_v1.json`
+
+練習頁不再把那 40 個種子詞當成詞組。
 
 模式 A、C 的點選表以書本聲母／韻母為準（2026-10-31）：
 
@@ -35,65 +43,9 @@ python3 -m http.server 8080
 
 判定規則在 `js/grade.js`：比對前轉成小寫、去掉空白、ü 與 v 相同、iou 與 iu、uei 與 ui、uen 與 un 相同、j／q／x 後面的 u 與 ü 相同。有聲母時寫成 iu、ui、un；j／q／x 後的 ü 寫成 u；聲母留空時依 `zero_initial_spell` 寫成 yi、wu、yu 等。常見讀音都在該詞的 `accept` 裡，答對其中一個就算對。模式 A 與模式 C 都把點選結果送進同一個 `PinyinGrade`，不另寫一套判定。模式 B 不比拼音：輸入的繁體字去掉空白後，要和該詞的漢字完全相同（種子欄位 `han`，練習資料裡是 `hanzi`）。不另收簡體或異體。`accept` 仍只表示可接受的拼音，題幹用詞上的帶調拼音。
 
-## Firebase
+## 練習紀錄
 
-`js/config.js` 的 `storage` 預設是 `"firebase"`。公開的 client 設定在 `js/firebase-config.js`（不是密鑰）：
-
-- 專案 `pinyin-practice-eabd1`
-- Firestore 區域 asia-east1
-- Auth 已開啟 Email／Password
-
-家長帳號固定為 `parent@pinyin-practice.local`（`APP_CONFIG.parentEmail`）。家長頁只讓人輸入密碼，再呼叫 `signInWithEmailAndPassword`。練習頁不載入 Auth，維持未登入。
-
-集合跟字詞形狀：
-
-| 集合 | 誰可以讀 | 誰可以寫 |
-| --- | --- | --- |
-| `sets` | 所有人 | 只有已登入、且電郵為 `parent@pinyin-practice.local` 的家長可新增、修改、刪除 |
-| `words` | 所有人 | 同上 |
-| `sessions` | 只有該家長 | 任何人可新增，但只能寫規定欄位與範圍；不可改、不可刪 |
-
-`sessions` 新增時只接受 `id`、`startedAt`（`toISOString()` 的 24 字）、`durationMs`（0–86400000 的整數）、`mode`（`A`、`B` 或 `C`）、`setId`、`total`、`correct`（0–500，且 `correct` 不大於 `total`）。練習頁不登入也能新增。家長若在同一個瀏覽器仍登入著，練習頁一樣可以新增，因為規則看的是欄位，不是「必須未登入」。
-
-規則在 `firestore.rules`。其他路徑預設拒絕。部署：
-
-```bash
-npx firebase-tools deploy --only firestore:rules --project pinyin-practice-eabd1
-```
-
-`firebase.json` 已指向這份規則。需要先 `npx firebase-tools login`。
-
-在規則部署、範例詞組寫入之前，練習頁若讀不到雲端詞組，會改用內建範例，讓點選拼音仍可練習。雲端有詞組之後，練習頁改讀 Firestore。
-
-離線開發可把 `js/config.js` 的 `storage` 改成 `"local"`，資料只留在這台裝置。測試也用這個覆寫。不要把家長密碼寫進版本庫。
-
-## 家長帳號與密碼
-
-1. Firebase 主控台 → Authentication → Sign-in method → 啟用 Email／Password。
-2. Users → Add user。電郵用 `parent@pinyin-practice.local`，密碼自己訂，不要提交到 git。
-3. 開啟 `admin.html`，輸入該密碼。
-
-更改密碼：登入家長頁後用「更改密碼」。表單會先問目前密碼，呼叫 `reauthenticateWithCredential`，成功後才 `updatePassword`。也可以在主控台的該使用者上重設。前端沒有預期的校驗碼。
-
-## 種入範例詞組
-
-40 個種子詞經 `PinyinGrade.mapSeedWord` 拆成 `readings`，放進名為「範例」的詞組（id `set_demo`）。
-
-登入家長頁，按「載入範例詞組」。已有同一 id 就不會覆寫。
-
-或在終端機執行（密碼只放環境變數）：
-
-```bash
-PINYIN_PARENT_PASSWORD='你的密碼' node scripts/seed-firestore.js
-```
-
-只列印將寫入的文件、不連線：
-
-```bash
-node scripts/seed-firestore.js --print
-```
-
-規則尚未部署時，寫入會被拒絕。
+做完一輪，練習頁把 `{ id, startedAt, durationMs, mode, setId, total, correct }` 寫進這個瀏覽器的 `localStorage`。重新整理還在。清除網站資料才會不見。不把舊的雲端紀錄搬過來。
 
 ## 已停用的 Worker
 
@@ -101,17 +53,17 @@ node scripts/seed-firestore.js --print
 
 ## GitHub Pages
 
-線上站只應包含練習頁需要的 HTML、CSS、JS、圖示和拼音 JSON。`firestore.rules`、`firebase.json`、`tests/`、`scripts/`、`worker/` 留在 git（給 `firebase deploy` 和測試），不進 Pages 成品。
+線上站只應包含練習頁需要的 HTML、CSS、JS、圖示、拼音表和單元 JSON。`tests/`、`scripts/`、`worker/` 留在 git，不進 Pages 成品。
 
 `.github/workflows/pages.yml` 在推上 `main` 時執行 `node scripts/export-pages.js`，把允許的檔案複製到 `_site`，再用 GitHub Pages 的 artifact 部署。
 
-倉庫設定只需做一次：Settings → Pages → Build and deployment → Source 選 **GitHub Actions**。在改成 Actions 之前，舊設定（分支 `main`、資料夾 `/`）仍會把整個倉庫，包括 `firestore.rules`，放到網站上。合併後請改來源；若那次推送的部署沒跑成，到 Actions 重跑 Deploy GitHub Pages。
+倉庫設定只需做一次：Settings → Pages → Build and deployment → Source 選 **GitHub Actions**。在改成 Actions 之前，舊設定（分支 `main`、資料夾 `/`）會把整個倉庫放到網站上。若那次推送的部署沒跑成，到 Actions 重跑 Deploy GitHub Pages。
 
 本機預覽仍用靜態伺服器，不經過這份清單。
 
 ## 離線
 
-`sw.js` 的 `VERSION` 目前是 `v11`。改了頁面、腳本或拼音資料（含 `js/firebase-config.js`）後，請把版本加一。靜態檔走網路優先，離線才用快取；一般重新整理就會換上新版本。練習頁底部不再放拼音表，練習進行中也不再列出詞組字詞。模式 A、C 一次送出整詞（每個字一格），模式 B 仍是輸入整詞繁體字。
+`sw.js` 的 `VERSION` 目前是 `v12`。改了頁面、腳本或拼音資料（含 `data/units/`）後，請把版本加一。靜態檔走網路優先，離線才用快取；一般重新整理就會換上新版本。練習頁底部不再放拼音表，練習進行中也不再列出單元字詞。模式 A、C 一次送出整詞（每個音節一格；兒化的「信兒」是一格）。模式 B 仍是輸入整詞繁體字。
 
 ## 聽讀（模式 C）
 
@@ -133,7 +85,8 @@ node scripts/seed-firestore.js --print
 
 ```bash
 node tests/grade.test.js
-node tests/cloud.test.js
+node tests/unit-words.test.js
+node tests/sessions.test.js
 node tests/mode-a.test.js
 node tests/mode-b.test.js
 node tests/mode-c.test.js

@@ -55,7 +55,7 @@
     var grade = gradeApi();
     if (grade && Array.isArray(word.readings) && word.readings.length) {
       return word.readings.map(function (reading) {
-        return grade.spellSyllable(reading.initial || "", reading.final, reading.tone);
+        return grade.spellSyllable(reading.initial || "", reading.final, reading.tone, reading.erhua);
       }).join(" ");
     }
     return String(word.pinyin || "");
@@ -162,7 +162,7 @@
       if (!words.length) {
         var empty = document.createElement("p");
         empty.className = "prompt";
-        empty.textContent = "請先選擇有字詞的詞組。";
+        empty.textContent = "請先選擇有字詞的單元。";
         root.appendChild(empty);
         return;
       }
