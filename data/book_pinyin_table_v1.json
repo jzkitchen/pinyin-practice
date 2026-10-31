@@ -1,0 +1,541 @@
+{
+  "version": "book-align-1",
+  "date": "2026-10-31",
+  "supersedes": [
+    "2026-10-31_校本拼音表對齊_v1",
+    "2026-10-31_無組合韻母作答策略_v1"
+  ],
+  "source_image": "/workspace/普通話拼音/deliverables/2026-10-31_書本聲母韻母表.jpg",
+  "decisions": {
+    "picker_shows_full_forms_iou_uei_uen": true,
+    "output_and_accept_use_orthographic_abbrev": true,
+    "show_y_w_buttons": false,
+    "empty_shengmu_allowed": true,
+    "zhengti_picker": false,
+    "zhengti_recommendation": "R1_no_independent_zone",
+    "all_40_seeds_spellable": true,
+    "er_on_picker": false
+  },
+  "ui_copy": {
+    "shengmu_title": "聲母",
+    "yunmu_title": "韻母",
+    "yunmu_note": "拼法參考《漢語拼音方案》",
+    "column_titles": {
+      "open": "開口",
+      "i": "齊齒",
+      "u": "合口",
+      "ü": "撮口"
+    },
+    "shengdiao_title": "聲調",
+    "empty_shengmu_hint": "這個音不用選聲母",
+    "abbrev_hint": "書本寫 iou、uei、uen；前面有聲母時寫成 iu、ui、un。"
+  },
+  "shengmu": [
+    {
+      "id": "sm_b",
+      "label": "b",
+      "key": "b",
+      "group": 1,
+      "example": "玻"
+    },
+    {
+      "id": "sm_p",
+      "label": "p",
+      "key": "p",
+      "group": 1,
+      "example": "坡"
+    },
+    {
+      "id": "sm_m",
+      "label": "m",
+      "key": "m",
+      "group": 1,
+      "example": "摸"
+    },
+    {
+      "id": "sm_f",
+      "label": "f",
+      "key": "f",
+      "group": 1,
+      "example": "佛"
+    },
+    {
+      "id": "sm_d",
+      "label": "d",
+      "key": "d",
+      "group": 2,
+      "example": "得"
+    },
+    {
+      "id": "sm_t",
+      "label": "t",
+      "key": "t",
+      "group": 2,
+      "example": "特"
+    },
+    {
+      "id": "sm_n",
+      "label": "n",
+      "key": "n",
+      "group": 2,
+      "example": "訥"
+    },
+    {
+      "id": "sm_l",
+      "label": "l",
+      "key": "l",
+      "group": 2,
+      "example": "勒"
+    },
+    {
+      "id": "sm_g",
+      "label": "g",
+      "key": "g",
+      "group": 3,
+      "example": "哥"
+    },
+    {
+      "id": "sm_k",
+      "label": "k",
+      "key": "k",
+      "group": 3,
+      "example": "科"
+    },
+    {
+      "id": "sm_h",
+      "label": "h",
+      "key": "h",
+      "group": 3,
+      "example": "喝"
+    },
+    {
+      "id": "sm_j",
+      "label": "j",
+      "key": "j",
+      "group": 4,
+      "example": "基"
+    },
+    {
+      "id": "sm_q",
+      "label": "q",
+      "key": "q",
+      "group": 4,
+      "example": "欺"
+    },
+    {
+      "id": "sm_x",
+      "label": "x",
+      "key": "x",
+      "group": 4,
+      "example": "希"
+    },
+    {
+      "id": "sm_zh",
+      "label": "zh",
+      "key": "zh",
+      "group": 5,
+      "example": "知"
+    },
+    {
+      "id": "sm_ch",
+      "label": "ch",
+      "key": "ch",
+      "group": 5,
+      "example": "蚩"
+    },
+    {
+      "id": "sm_sh",
+      "label": "sh",
+      "key": "sh",
+      "group": 5,
+      "example": "詩"
+    },
+    {
+      "id": "sm_r",
+      "label": "r",
+      "key": "r",
+      "group": 5,
+      "example": "日"
+    },
+    {
+      "id": "sm_z",
+      "label": "z",
+      "key": "z",
+      "group": 6,
+      "example": "資"
+    },
+    {
+      "id": "sm_c",
+      "label": "c",
+      "key": "c",
+      "group": 6,
+      "example": "雌"
+    },
+    {
+      "id": "sm_s",
+      "label": "s",
+      "key": "s",
+      "group": 6,
+      "example": "思"
+    }
+  ],
+  "yunmu": [
+    {
+      "id": "ym_a",
+      "label": "a",
+      "key": "a",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "a"
+    },
+    {
+      "id": "ym_o",
+      "label": "o",
+      "key": "o",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "o"
+    },
+    {
+      "id": "ym_e",
+      "label": "e",
+      "key": "e",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "e"
+    },
+    {
+      "id": "ym_ai",
+      "label": "ai",
+      "key": "ai",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "ai"
+    },
+    {
+      "id": "ym_ei",
+      "label": "ei",
+      "key": "ei",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "ei"
+    },
+    {
+      "id": "ym_ao",
+      "label": "ao",
+      "key": "ao",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "ao"
+    },
+    {
+      "id": "ym_ou",
+      "label": "ou",
+      "key": "ou",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "ou"
+    },
+    {
+      "id": "ym_an",
+      "label": "an",
+      "key": "an",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "an"
+    },
+    {
+      "id": "ym_en",
+      "label": "en",
+      "key": "en",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "en"
+    },
+    {
+      "id": "ym_ang",
+      "label": "ang",
+      "key": "ang",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "ang"
+    },
+    {
+      "id": "ym_eng",
+      "label": "eng",
+      "key": "eng",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "eng"
+    },
+    {
+      "id": "ym_ong",
+      "label": "ong",
+      "key": "ong",
+      "column": "open",
+      "group": 1,
+      "write_with_initial": "ong"
+    },
+    {
+      "id": "ym_i",
+      "label": "i",
+      "key": "i",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "i"
+    },
+    {
+      "id": "ym_ia",
+      "label": "ia",
+      "key": "ia",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "ia"
+    },
+    {
+      "id": "ym_ie",
+      "label": "ie",
+      "key": "ie",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "ie"
+    },
+    {
+      "id": "ym_iao",
+      "label": "iao",
+      "key": "iao",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "iao"
+    },
+    {
+      "id": "ym_iou",
+      "label": "iou",
+      "key": "iou",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "iu"
+    },
+    {
+      "id": "ym_ian",
+      "label": "ian",
+      "key": "ian",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "ian"
+    },
+    {
+      "id": "ym_in",
+      "label": "in",
+      "key": "in",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "in"
+    },
+    {
+      "id": "ym_iang",
+      "label": "iang",
+      "key": "iang",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "iang"
+    },
+    {
+      "id": "ym_ing",
+      "label": "ing",
+      "key": "ing",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "ing"
+    },
+    {
+      "id": "ym_iong",
+      "label": "iong",
+      "key": "iong",
+      "column": "i",
+      "group": 2,
+      "write_with_initial": "iong"
+    },
+    {
+      "id": "ym_u",
+      "label": "u",
+      "key": "u",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "u"
+    },
+    {
+      "id": "ym_ua",
+      "label": "ua",
+      "key": "ua",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "ua"
+    },
+    {
+      "id": "ym_uo",
+      "label": "uo",
+      "key": "uo",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "uo"
+    },
+    {
+      "id": "ym_uai",
+      "label": "uai",
+      "key": "uai",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "uai"
+    },
+    {
+      "id": "ym_uei",
+      "label": "uei",
+      "key": "uei",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "ui"
+    },
+    {
+      "id": "ym_uan",
+      "label": "uan",
+      "key": "uan",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "uan"
+    },
+    {
+      "id": "ym_uen",
+      "label": "uen",
+      "key": "uen",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "un"
+    },
+    {
+      "id": "ym_uang",
+      "label": "uang",
+      "key": "uang",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "uang"
+    },
+    {
+      "id": "ym_ueng",
+      "label": "ueng",
+      "key": "ueng",
+      "column": "u",
+      "group": 3,
+      "write_with_initial": "ueng"
+    },
+    {
+      "id": "ym_v",
+      "label": "ü",
+      "key": "ü",
+      "column": "ü",
+      "group": 4,
+      "write_with_initial": "ü"
+    },
+    {
+      "id": "ym_ve",
+      "label": "üe",
+      "key": "üe",
+      "column": "ü",
+      "group": 4,
+      "write_with_initial": "üe"
+    },
+    {
+      "id": "ym_van",
+      "label": "üan",
+      "key": "üan",
+      "column": "ü",
+      "group": 4,
+      "write_with_initial": "üan"
+    },
+    {
+      "id": "ym_vn",
+      "label": "ün",
+      "key": "ün",
+      "column": "ü",
+      "group": 4,
+      "write_with_initial": "ün"
+    }
+  ],
+  "zero_initial_spell": {
+    "a": "a",
+    "o": "o",
+    "e": "e",
+    "ai": "ai",
+    "ei": "ei",
+    "ao": "ao",
+    "ou": "ou",
+    "an": "an",
+    "en": "en",
+    "ang": "ang",
+    "eng": "eng",
+    "ong": "ong",
+    "i": "yi",
+    "ia": "ya",
+    "ie": "ye",
+    "iao": "yao",
+    "iou": "you",
+    "ian": "yan",
+    "in": "yin",
+    "iang": "yang",
+    "ing": "ying",
+    "iong": "yong",
+    "u": "wu",
+    "ua": "wa",
+    "uo": "wo",
+    "uai": "wai",
+    "uei": "wei",
+    "uan": "wan",
+    "uen": "wen",
+    "uang": "wang",
+    "ueng": "weng",
+    "ü": "yu",
+    "üe": "yue",
+    "üan": "yuan",
+    "ün": "yun"
+  },
+  "normalize_rules": [
+    "lowercase_trim",
+    "ü_equiv_v",
+    "iou_equiv_iu",
+    "uei_equiv_ui",
+    "uen_equiv_un",
+    "jqx_u_equiv_ü"
+  ],
+  "shengdiao": [
+    {
+      "id": "sd_1",
+      "label": "第一聲",
+      "mark": "ˉ",
+      "tone": 1
+    },
+    {
+      "id": "sd_2",
+      "label": "第二聲",
+      "mark": "ˊ",
+      "tone": 2
+    },
+    {
+      "id": "sd_3",
+      "label": "第三聲",
+      "mark": "ˇ",
+      "tone": 3
+    },
+    {
+      "id": "sd_4",
+      "label": "第四聲",
+      "mark": "ˋ",
+      "tone": 4
+    },
+    {
+      "id": "sd_0",
+      "label": "輕聲",
+      "mark": "·",
+      "tone": 0
+    }
+  ]
+}

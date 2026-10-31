@@ -325,7 +325,7 @@
 
   function boot() {
     setStatus("載入中…");
-    PinyinTables.load(APP_CONFIG.dataUrl).then(function (data) {
+    PinyinTables.load(APP_CONFIG.dataUrl, APP_CONFIG.bookTableUrl).then(function (data) {
       PinyinGrade.init(data);
       PinyinCloud.init(APP_CONFIG, { tables: data });
       return PinyinCloud.connect();

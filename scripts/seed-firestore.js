@@ -17,11 +17,14 @@
 var fs = require("fs");
 var path = require("path");
 var Grade = require("../js/grade.js");
+var Tables = require("../js/pinyin-tables.js");
 var config = require("../js/config.js");
 var firebaseConfig = require("../js/firebase-config.js");
 
 var root = path.join(__dirname, "..");
-var data = JSON.parse(fs.readFileSync(path.join(root, "data/pinyin_tables_and_seeds_v1.json"), "utf8"));
+var seeds = JSON.parse(fs.readFileSync(path.join(root, "data/pinyin_tables_and_seeds_v1.json"), "utf8"));
+var book = JSON.parse(fs.readFileSync(path.join(root, "data/book_pinyin_table_v1.json"), "utf8"));
+var data = Tables.applyBook(seeds, book);
 Grade.init(data);
 
 function seedStamp(index) {

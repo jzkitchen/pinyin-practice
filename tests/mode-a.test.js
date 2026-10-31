@@ -23,6 +23,7 @@ var bank = wordOf("s37");
 var grow = wordOf("s39");
 var wall = wordOf("s40");
 var fish = wordOf("s34");
+var shui = wordOf("s09");
 var school = wordOf("s21");
 var luggage = wordOf("s38");
 
@@ -48,6 +49,19 @@ assert.strictEqual(ModeA.gradeSyllable(grow, 0, { initial: "ch", final: "ang", t
 assert.strictEqual(ModeA.gradeSyllable(wall, 0, { initial: "ch", final: "ang", tone: 2 }).ok, true);
 assert.strictEqual(ModeA.gradeSyllable(wall, 0, { initial: "zh", final: "ang", tone: 3 }).ok, false);
 assert.strictEqual(ModeA.gradeSyllable(fish, 0, { initial: "", final: "ü", tone: 2 }).ok, true);
+var friend = wordOf("s08");
+assert.strictEqual(ModeA.gradeSyllable(shui, 0, { initial: "sh", final: "uei", tone: 3 }).ok, true);
+assert.strictEqual(ModeA.gradeSyllable(shui, 0, { initial: "sh", final: "ui", tone: 3 }).ok, true);
+assert.strictEqual(ModeA.gradeSyllable(friend, 1, { initial: "", final: "iou", tone: 0 }).ok, true);
+assert.strictEqual(ModeA.gradeSyllable(friend, 1, { initial: "", final: "iu", tone: 0 }).ok, true);
+assert.strictEqual(ModeA.gradeSyllable(friend, 1, { initial: "", final: "iou", tone: 0 }).correctPinyin, "you");
+var friendRun = ModeA.createRun([friend]);
+var friendOk = ModeA.submit(friendRun, [
+  { initial: "p", final: "eng", tone: 2 },
+  { initial: "", final: "iou", tone: 3 }
+]);
+assert.strictEqual(friendOk.ok, true);
+assert.ok(friendOk.feedback.indexOf("péng you") >= 0);
 assert.strictEqual(ModeA.gradeSyllable(fish, 0, { initial: "y", final: "u", tone: 2 }).ok, false);
 assert.strictEqual(ModeA.gradeSyllable(school, 0, { initial: "x", final: "üe", tone: 2 }).ok, true);
 assert.strictEqual(ModeA.gradeSyllable(luggage, 1, { initial: "l", final: "i", tone: 0 }).ok, true);
@@ -78,7 +92,6 @@ data.seed_words.forEach(function (seed) {
   });
 });
 
-var shui = wordOf("s09");
 var run = ModeA.createRun([mama, shui]);
 assert.strictEqual(run.done, false);
 assert.strictEqual(run.total, 2);
@@ -101,7 +114,7 @@ var accepted = ModeA.submit(bothTones, [
 assert.strictEqual(accepted.ok, true);
 assert.strictEqual(accepted.allCorrect, true);
 assert.ok(accepted.feedback.indexOf("mā ma") >= 0);
-var third = ModeA.submit(run, [{ initial: "sh", final: "ui", tone: 3 }]);
+var third = ModeA.submit(run, [{ initial: "sh", final: "uei", tone: 3 }]);
 assert.strictEqual(third.ok, true);
 assert.strictEqual(third.wordDone, true);
 assert.strictEqual(third.allCorrect, true);

@@ -41,11 +41,14 @@
     if (!readings) return { ok: false, text: "還不能拆開。請核對帶調拼音和聲調個數。" };
     var data = PinyinTables.get();
     var text = readings.map(function (reading) {
-      var sm = data.shengmu.find(function (item) { return item.key === reading.initial; });
-      var ym = data.yunmu.find(function (item) { return item.key === reading.final; });
+      var sm = reading.initial ? data.shengmu.find(function (item) { return item.key === reading.initial; }) : null;
+      var full = reading.final === "iu" ? "iou" : reading.final === "ui" ? "uei" : reading.final === "un" ? "uen" : reading.final;
+      var ym = data.yunmu.find(function (item) {
+        return item.key === reading.final || item.key === full || item.label === reading.final || item.label === full;
+      });
       var sd = data.shengdiao.find(function (item) { return item.tone === reading.tone; });
       var spelled = PinyinGrade.spellSyllable(reading.initial, reading.final, reading.tone);
-      return (sm ? sm.label : "零") + " + " + (ym ? ym.label : reading.final) + " · " + (sd ? sd.label : reading.tone) + "（" + spelled + "）";
+      return (sm ? sm.label : "無聲母") + " + " + (ym ? ym.label : reading.final) + " · " + (sd ? sd.label : reading.tone) + "（" + spelled + "）";
     }).join("　");
     return { ok: true, readings: readings, text: text };
   }
@@ -511,7 +514,7 @@
       sessionStorage.removeItem("pinyinAdminUnlocked");
       sessionStorage.removeItem("pinyinAdminSha");
     } catch (err) { /* ignore */ }
-    PinyinTables.load(APP_CONFIG.dataUrl).then(function (data) {
+    PinyinTables.load(APP_CONFIG.dataUrl, APP_CONFIG.bookTableUrl).then(function (data) {
       PinyinGrade.init(data);
       PinyinCloud.init(APP_CONFIG, { tables: data });
       if (!PinyinCloud.firebaseConfigured()) {

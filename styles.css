@@ -297,6 +297,31 @@ summary { cursor: pointer; font-weight: 750; }
 
 .picker-block h3 { margin-bottom: 8px; }
 
+.picker-block h4 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.shengmu-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+}
+
+.yunmu-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.yunmu-col .chips {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.yunmu-col button.pick { width: 100%; }
+
 button.pick {
   background: var(--soft);
   color: var(--ink);
@@ -415,6 +440,7 @@ button.slot[aria-pressed="true"] {
 @media (max-width: 640px) {
   .modes { grid-template-columns: 1fr; }
   .row { align-items: flex-start; flex-direction: column; }
+  .yunmu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .practice-han { font-size: 2.6rem; }
   .practice-pinyin { font-size: 1.7rem; }
   .han-input { font-size: 1.35rem; }

@@ -211,15 +211,12 @@
     return Array.from(String(text || ""));
   }
 
-  function button(label, part, value, pressed) {
-    var node = document.createElement("button");
-    node.type = "button";
-    node.className = "pick";
-    node.setAttribute("data-part", part);
-    node.setAttribute("data-value", value);
-    node.setAttribute("aria-pressed", pressed ? "true" : "false");
-    node.textContent = label;
-    return node;
+  function pickerApi() {
+    if (typeof SyllablePicker !== "undefined" && SyllablePicker && typeof SyllablePicker.append === "function") {
+      return SyllablePicker;
+    }
+    if (typeof require === "function") return require("../syllable-picker.js");
+    throw new Error("點選表尚未載入");
   }
 
   function mount(root, ctx) {
@@ -236,7 +233,7 @@
     var slotWord = null;
 
     function blankSlot() {
-      return { initial: null, final: null, tone: null, hasInitial: false };
+      return { initial: null, final: null, tone: null };
     }
 
     function syncSlots(word) {
@@ -253,7 +250,7 @@
     }
 
     function slotDone(slot) {
-      return !!(slot && slot.hasInitial && slot.final != null && slot.tone != null);
+      return !!(slot && slot.final != null && slot.tone != null);
     }
 
     function shown() {
@@ -352,10 +349,11 @@
         return;
       }
 
-      var current = activeSlot();
-      root.append(pickerBlock("聲母", "initial", tables.shengmu.map(function (item) {
-        return { label: item.label, value: item.key };
-      }), current.hasInitial ? current.initial : null), pickerGroups(tables.yunmu), toneBlock(tables.shengdiao));
+      pickerApi().append(root, {
+        tables: tables,
+        slot: activeSlot(),
+        onChoose: choose
+      });
 
       var check = document.createElement("button");
       check.type = "button";
@@ -365,7 +363,7 @@
       check.addEventListener("click", function () {
         if (!readyToCheck()) return;
         last = submit(run, slots.map(function (slot) {
-          return { initial: slot.initial, final: slot.final, tone: slot.tone };
+          return { initial: slot.initial || "", final: slot.final, tone: slot.tone };
         }));
         phase = "feedback";
         draw();
@@ -383,8 +381,7 @@
       var slot = slots[active];
       if (!slot) return;
       if (part === "initial") {
-        slot.initial = value;
-        slot.hasInitial = true;
+        slot.initial = value ? value : null;
       } else if (part === "final") {
         slot.final = value;
       } else {
@@ -395,7 +392,7 @@
 
     function slotSpell(slot) {
       if (!slotDone(slot)) return "？";
-      return gradeApi().spellSyllable(slot.initial, slot.final, slot.tone);
+      return gradeApi().spellSyllable(slot.initial || "", slot.final, slot.tone);
     }
 
     function slotRow(word) {
@@ -422,55 +419,6 @@
         row.appendChild(node);
       });
       return row;
-    }
-
-    function pickerBlock(titleText, part, items, current) {
-      var block = document.createElement("div");
-      block.className = "picker-block";
-      var heading = document.createElement("h3");
-      heading.textContent = titleText;
-      var row = document.createElement("div");
-      row.className = "chips";
-      items.forEach(function (item) {
-        var pressed = current != null && String(current) === String(item.value);
-        var node = button(item.label, part, item.value, pressed);
-        node.addEventListener("click", function () { choose(part, item.value); });
-        row.appendChild(node);
-      });
-      block.append(heading, row);
-      return block;
-    }
-
-    function pickerGroups(yunmu) {
-      var block = document.createElement("div");
-      block.className = "picker-block";
-      var heading = document.createElement("h3");
-      heading.textContent = "韻母";
-      block.appendChild(heading);
-      var seen = [];
-      yunmu.forEach(function (item) {
-        if (seen.indexOf(item.group) === -1) seen.push(item.group);
-      });
-      seen.forEach(function (group) {
-        var sub = document.createElement("h4");
-        sub.textContent = group;
-        var row = document.createElement("div");
-        row.className = "chips";
-        yunmu.filter(function (item) { return item.group === group; }).forEach(function (item) {
-          var pressed = activeSlot().final != null && activeSlot().final === item.key;
-          var node = button(item.label, "final", item.key, pressed);
-          node.addEventListener("click", function () { choose("final", item.key); });
-          row.appendChild(node);
-        });
-        block.append(sub, row);
-      });
-      return block;
-    }
-
-    function toneBlock(shengdiao) {
-      return pickerBlock("聲調", "tone", shengdiao.map(function (item) {
-        return { label: item.label + " " + item.mark, value: String(item.tone) };
-      }), activeSlot().tone == null ? null : String(activeSlot().tone));
     }
 
     draw();
